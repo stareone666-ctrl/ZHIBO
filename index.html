@@ -3192,6 +3192,11 @@ function assemble({paras,skipped}){
     const solid=x.runs.filter(r=>r.t.trim());
     return x.kind==='h2'||NUM_HEAD_RE.test(t)||(solid.length>0&&solid.every(r=>r.b));
   };
+  /* No subheadings anywhere (a typical press release): split at the photos
+     instead. Text runs on until a photo; the photos close that chapter, and
+     the next paragraph opens a new, untitled one. A 【照片：…】 note counts as
+     a photo position too. */
+  const byPhoto=!hasH1&&!items.some(x=>x.kind!=='title'&&x.kind!=='subtitle'&&!x.label&&headingLike(x));
   /* pass 2: build */
   for(const x of items){
     const t=runsText(x.runs).trim();
@@ -3208,11 +3213,13 @@ function assemble({paras,skipped}){
       out.sections.push({title:t,paras:[],images:[],hints:[]});
     }
     else if(t){
+      if(byPhoto&&(cur().images.length||cur().hints.length))out.sections.push({title:'',paras:[],images:[],hints:[]});
       cur().paras.push(x.kind==='h2'||x.kind==='title'||x.kind==='subtitle'?x.runs.map(r=>({...r,b:true})):x.runs);
     }
     cur().images.push(...x.images);
     cur().hints.push(...x.hints);
   }
+  out.byPhoto=byPhoto&&out.sections.length>0;
   return out;
 }
 
@@ -3263,6 +3270,7 @@ async function importParsed(parsed){
   const lines=[`${impMode==='replace'?'已导入':'已追加'} ${secs.length} 个篇章、${photos} 张照片${got.length?'，以及'+got.join('、'):''}。`];
   const skip=doc.skipped+bad;
   if(skip)lines.push(`${skip} 张图片格式不支持（如 EMF、TIFF），已跳过，可以在篇章里重新加。`);
+  if(doc.byPhoto)lines.push('文档里没有小标题，已按照片的位置分段；需要标题条的篇章，展开后填上标题即可。');
   if(hints)lines.push(`${hints} 处「待补照片」已标在对应篇章里。`);
   if(impMode==='append'&&(doc.title||doc.subtitle))lines.push('追加模式不改标题栏。');
   impReport=lines.join('\n');
