@@ -3052,7 +3052,7 @@ async function parseDocx(file){
       }
     };
     await walk(p);
-    paras.push({kind,runs,images});
+    paras.push({kind,runs,images,center:wval(kid(pPr,'jc'))==='center'});
   };
   const walkBlock=async el=>{
     for(const ch of el.children){
@@ -3110,6 +3110,7 @@ const FIELD_RE=/^\s*(?:\*\*)?\s*(主标题|副标题|标题|落款|日期|结束
 const CHAPTER_RE=/^\s*(?:\*\*)?\s*(?:【\s*篇章(?:标题)?\s*(?:[0-9一二三四五六七八九十]+)?\s*[:：]?\s*】|篇章(?:标题)?\s*(?:[0-9一二三四五六七八九十]+)?\s*[:：])\s*/;
 const HINT_RE=/[【\[［]\s*(?:照片|图片|配图)\s*[:：]?\s*([^】\]］]*)[】\]］]/g;
 const NOTE_RE=/^\s*[【\[]\s*说明\s*[】\]]/;
+const BYLINE_RE=/^\s*[（(]?\s*(?:来源|作者|通讯员|记者|编辑|责任编辑|责编|审核|审校|签发|供稿|撰稿|摄影|摄|图|文|图\/文|文\/图|图文)\s*[:：/｜|]|^\s*[（(]\s*(?:通讯员|记者|作者|实习生)\s+\S/;
 const NUM_HEAD_RE=/^\s*(?:[一二三四五六七八九十]{1,3}[、.．]|（[一二三四五六七八九十]{1,3}）|\([一二三四五六七八九十]{1,3}\)|第[一二三四五六七八九十0-9]{1,3}[章篇部分节][\s、：:]?|\d{1,2}[、．]|\d{1,2}\.(?!\d))/;
 const runsText=runs=>runs.map(r=>r.t).join('');
 function stripPrefix(runs,len){
@@ -3153,22 +3154,38 @@ function assemble({paras,skipped}){
       runs=dropRanges(runs,found.map(m=>[m.index,m.index+m[0].length]));
     }
     runs=trimRuns(runs);txt=runsText(runs);
-    let kind=p.kind,label=null,m;
+    let kind=p.kind,label=null,tagged=false,m;
     if(kind==='body'||kind==='h2'){
-      if((m=txt.match(/^\s*【\s*篇章(?:标题)?\s*[0-9一二三四五六七八九十]*\s*[:：]\s*([^】]+)】\s*$/))){kind='h1';runs=[{t:m[1].trim()}]}
-      else if((m=txt.match(CHAPTER_RE))){kind='h1';runs=trimRuns(stripPrefix(runs,m[0].length))}
+      if((m=txt.match(/^\s*【\s*篇章(?:标题)?\s*[0-9一二三四五六七八九十]*\s*[:：]\s*([^】]+)】\s*$/))){kind='h1';tagged=true;runs=[{t:m[1].trim()}]}
+      else if((m=txt.match(CHAPTER_RE))){kind='h1';tagged=true;runs=trimRuns(stripPrefix(runs,m[0].length))}
       else if((m=txt.match(FIELD_RE))){label=m[1];runs=trimRuns(stripPrefix(runs,m[0].length))}
     }
-    items.push({kind,label,runs,images:p.images,hints});
+    /* press-release bylines (来源、通讯员、编辑…) stay out of the long image */
+    if(!label&&BYLINE_RE.test(runsText(runs))&&runsText(runs).length<=48){
+      if(p.images.length||hints.length)items.push({kind:'body',runs:[],images:p.images,hints});
+      continue;
+    }
+    items.push({kind,label,tagged,runs,images:p.images,hints,center:!!p.center});
   }
   const hasTitle=items.some(x=>x.kind==='title'||x.label==='主标题'||x.label==='标题');
-  const hasH1=items.some(x=>x.kind==='h1');
-  /* a document typed without styles: the first short line is the title */
+  /* No title style or label: the document's first line is its title — a press
+     release headline is often long, bold, centred or styled 标题 1, and should
+     go to the header rather than become the first chapter. A line that reads
+     like a sentence (ends in 。！？) or is numbered (一、…) is left alone. */
   if(!hasTitle){
-    const first=items.find(x=>runsText(x.runs).trim());
-    const t=first&&runsText(first.runs).trim();
-    if(first&&!first.label&&first.kind==='body'&&t.length<=30&&!/[。！？；，,.!?;]$/.test(t)&&!NUM_HEAD_RE.test(t))first.kind='title';
+    const at=items.findIndex(x=>runsText(x.runs).trim());
+    const first=items[at],t=first&&runsText(first.runs).trim();
+    if(first&&!first.label&&!first.tagged&&first.kind!=='subtitle'&&t.length<=64
+      &&!/[。！？；…!?;]$/.test(t)&&!NUM_HEAD_RE.test(t)){
+      first.kind='title';
+      /* the line under it is a subtitle when it starts with a dash or is a short centred line */
+      const nx=items.slice(at+1).find(x=>runsText(x.runs).trim());
+      const nt=nx&&runsText(nx.runs).trim();
+      if(nx&&!nx.label&&!nx.tagged&&nx.kind!=='h1'&&nt.length<=60&&!/[。！？]$/.test(nt)
+        &&(/^[—–-]{1,2}/.test(nt)||(nx.center&&first.center)))nx.kind='subtitle';
+    }
   }
+  const hasH1=items.some(x=>x.kind==='h1');
   const headingLike=x=>{
     const t=runsText(x.runs).trim();
     if(!t||t.length>26||/[。；，,;：:！？!?]$/.test(t))return false;
