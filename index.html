@@ -3740,7 +3740,7 @@ const SIZES=[
   {g:'竖幅',items:[[.8,2.5],[1,3]]}];
 const MATS=['横幅布','喷绘布','刀刮布','灯布','写真'];
 const LOGOS=[['none','无'],...Object.entries(BRAND_LOGOS).map(([id,b])=>[id,b.name]),['custom','上传']];
-const TONES=[['tint','同字色'],['color','原色'],['plate','白底']];
+const TONES=[['tint','同字色'],['color','原色'],['plate','白底'],['white','反白']];
 
 let uid=Date.now()%100000;
 const nb=(over={})=>({id:'b'+(uid++),text:'热烈欢迎各位学员参加培训班',w:8,h:.7,mat:'横幅布',qty:1,
@@ -3878,7 +3878,11 @@ function plan(c,b,W,H,img){
     if(stack){
       const groupCross=logo.cross+logo.gap+blockCross,top=(cross-groupCross)/2;
       let ly=top;
-      if(lv==='top'){ly=edge;crossMid=cross/2}
+      if(lv==='top'){
+        ly=edge;crossMid=cross/2;
+        /* 反白 on top keeps a little more air between the logo and the text */
+        if(b.logoTone==='white'){const minTop=ly+logo.cross*1.55;if(crossMid-blockCross/2<minTop)crossMid=Math.min(minTop+blockCross/2,cross-edge-blockCross/2)}
+      }
       else if(lv==='bottom'){crossMid=top+blockCross/2;ly=top+blockCross+logo.gap}
       else crossMid=top+logo.cross+logo.gap+blockCross/2;
       logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
@@ -3887,7 +3891,10 @@ function plan(c,b,W,H,img){
       const endGap=Math.min(pad,main*.05);
       let ly=start;
       if(lv==='bottom'){textAt=start;ly=start+blockMain+logo.gap}
-      else if(lv==='top'){ly=endGap;textAt=start}
+      else if(lv==='top'){
+        ly=endGap;textAt=start;
+        if(b.logoTone==='white'){const minAt=ly+logo.main+Math.max(logo.main*.6,cross*.08);if(textAt<minAt)textAt=Math.min(minAt,main-endGap-blockMain)}
+      }
       logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
     }else{
       const ly=lv==='top'?edge:lv==='bottom'?cross-lh-edge:(cross-lh)/2;
@@ -3908,7 +3915,7 @@ function drawBanner(c,b,W,H,img,opt={}){
     const{x,y,w,h}=p.logoBox;
     if(b.logoTone==='plate'){
       const m=Math.min(w,h)*.16;c.fillStyle='#ffffff';round(c,x-m,y-m,w+2*m,h+2*m,m*1.2);c.drawImage(img,x,y,w,h);
-    }else c.drawImage(b.logoTone==='color'?img:tinted(img,b.fg),x,y,w,h);
+    }else c.drawImage(b.logoTone==='color'?img:tinted(img,b.logoTone==='white'?'#ffffff':b.fg),x,y,w,h);
   }
   if(!p.lines.length){
     if(opt.placeholder){font(c,Math.round(p.cross*.18));c.fillStyle=b.fg;c.globalAlpha=.45;c.textAlign='center';c.textBaseline='middle';
