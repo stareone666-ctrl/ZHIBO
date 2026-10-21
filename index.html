@@ -508,6 +508,7 @@ body.vresizing,body.vresizing *{cursor:row-resize!important;user-select:none!imp
 .bn-edit .bn-step input{width:70px;padding:0;border:0;border-radius:0;background:transparent;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
 .bn-edit .bn-step input:focus{background:var(--raise)}
 .bn-u{font-size:12.5px;color:var(--ink-2)}
+.bn-lpos{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}
 .bn-fit b{color:var(--ink);font-weight:500}
 .bn-fit.warn{color:var(--accent)}
 .bn-logos{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
@@ -3746,7 +3747,7 @@ const TONES=[['tint','同字色'],['color','原色'],['plate','白底']];
 
 let uid=Date.now()%100000;
 const nb=(over={})=>({id:'b'+(uid++),text:'热烈欢迎各位学员参加培训班',w:8,h:.7,mat:'横幅布',qty:1,
-  bg:'#e60012',fg:'#ffffff',font:'sans',bold:true,fill:66,size:0,spacing:12,pad:60,align:'center',dir:'auto',border:false,logoScale:100,
+  bg:'#e60012',fg:'#ffffff',font:'sans',bold:true,fill:66,size:0,spacing:12,pad:60,align:'center',dir:'auto',border:false,logoScale:100,logoV:'mid',
   logo:'none',logoData:'',logoTone:'tint',...over});
 const init=()=>({v:1,cur:0,view:'one',dpi:'auto',banners:[nb()],info:{client:'',project:'',contact:'',date:'',note:''}});
 
@@ -3765,7 +3766,7 @@ function clean(s){
     b.mat=MATS.includes(r.mat)?r.mat:(typeof r.mat==='string'&&r.mat.trim()?r.mat.trim().slice(0,20):b.mat);
     b.bg=hex(r.bg)||b.bg;b.fg=hex(r.fg)||b.fg;
     b.font=FONTS.some(f=>f[0]===r.font)?r.font:'sans';b.bold=r.bold!==false;
-    b.fill=num(r.fill,30,90,66);b.size=Math.round(num(r.size,0,500,0)*10)/10;b.logoScale=num(r.logoScale,40,250,100);b.spacing=num(r.spacing,0,80,12);b.pad=num(r.pad,0,200,60);
+    b.fill=num(r.fill,30,90,66);b.size=Math.round(num(r.size,0,500,0)*10)/10;b.logoScale=num(r.logoScale,40,250,100);b.logoV=['top','mid','bottom'].includes(r.logoV)?r.logoV:'mid';b.spacing=num(r.spacing,0,80,12);b.pad=num(r.pad,0,200,60);
     b.align=r.align==='spread'?'spread':'center';b.dir=['auto','h','v'].includes(r.dir)?r.dir:'auto';b.border=!!r.border;
     b.logo=LOGOS.some(l=>l[0]===r.logo)?r.logo:'none';b.logoData=typeof r.logoData==='string'?r.logoData:'';
     if(b.logo==='custom'&&!b.logoData)b.logo='none';
@@ -3871,12 +3872,28 @@ function plan(c,b,W,H,img){
   let textAt=start+beside,crossMid=cross/2,logoBox=null;
   if(logo){
     const lw=vert?logo.cross:logo.main,lh=vert?logo.main:logo.cross;
+    /* 上 / 中 / 下: beside the text it slides along the banner's height; above
+       a backdrop's text it pins to the top, sits with the text, or goes under it;
+       on a 竖幅 it pins to the top end, leads the column, or follows it */
+    const lv=b.logoV||'mid',edge=Math.max(0,Math.min(cross*.08,(cross-logo.cross)/2));
     if(stack){
       const groupCross=logo.cross+logo.gap+blockCross,top=(cross-groupCross)/2;
-      logoBox={x:(W-lw)/2,y:top,w:lw,h:lh};
-      crossMid=top+logo.cross+logo.gap+blockCross/2;
+      let ly=top;
+      if(lv==='top'){ly=edge;crossMid=(edge+logo.cross+logo.gap+cross-edge)/2;crossMid=Math.max(crossMid,ly+logo.cross+logo.gap+blockCross/2)}
+      else if(lv==='bottom'){crossMid=top+blockCross/2;ly=top+blockCross+logo.gap}
+      else crossMid=top+logo.cross+logo.gap+blockCross/2;
+      logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
       textAt=(main-blockMain)/2;
-    }else logoBox={x:vert?(W-lw)/2:start,y:vert?start:(H-lh)/2,w:lw,h:lh};
+    }else if(vert){
+      const endGap=Math.min(pad,main*.05);
+      let ly=start;
+      if(lv==='bottom'){textAt=start;ly=start+blockMain+logo.gap}
+      else if(lv==='top'){ly=endGap;const from=ly+logo.main+logo.gap;textAt=Math.max(from,(from+main-endGap-blockMain)/2)}
+      logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
+    }else{
+      const ly=lv==='top'?edge:lv==='bottom'?cross-lh-edge:(cross-lh)/2;
+      logoBox={x:start,y:ly,w:lw,h:lh};
+    }
   }
   return{want,pxm,vert,main,cross,px,glyph,scale,lines,lens,logo,logoBox,textAt,crossMid,blockMain,blockCross,gapK,g,stack};
 }
@@ -3999,6 +4016,13 @@ const IC={
   size:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M3 20h18M3 18.5v3M21 18.5v3"/></svg>',
   style:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 1.8-1.2 1.2-2.2-.7-1.2.1-2.6 1.5-2.6h1.8a4 4 0 0 0 4-4"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/></svg>',
   out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13l2 2 4-4"/></svg>'};
+/* the three positions read differently by layout, so the labels say what happens */
+const LVS=b=>{
+  const vert=isVert(b),stack=!vert&&b.h/b.w>=.35&&linesOf(b).length>0;
+  return stack?[['top','顶部'],['mid','文字上方'],['bottom','文字下方']]
+    :vert?[['top','顶端'],['mid','文字上方'],['bottom','文字下方']]
+    :[['top','上'],['mid','中'],['bottom','下']];
+};
 const pressed=v=>`aria-pressed="${!!v}"`;
 const slider=(k,label,min,max,step,val,fmt)=>`<div class="slide"><label class="lab" for="bf-${k}">${label}</label><output id="bo-${k}">${fmt(val)}</output>
   <input type="range" id="bf-${k}" data-bf="${k}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
@@ -4035,13 +4059,14 @@ function renderEdit(){
           <div class="f"><span class="lab">方向</span><div class="seg bn-seg" role="group" aria-label="文字方向">
             ${[['auto','自动'],['h','横排'],['v','竖排']].map(([v,n])=>`<button type="button" data-bset="dir" data-v="${v}" ${pressed(b.dir===v)}>${n}</button>`).join('')}</div></div>
         </div>
-        <div class="f"><span class="lab">Logo <span class="opt">放在文字${vert?'上方':'左侧'}</span></span>
+        <div class="f"><span class="lab">Logo <span class="opt">${!vert&&!(b.h/b.w>=.35&&linesOf(b).length)?'放在文字左侧':'放在文字上下'}</span></span>
           <div class="bn-logos">${LOGOS.map(([id,n])=>{
             const src=id==='custom'?b.logoData:BRAND_LOGOS[id]?.src;
             const face=id==='none'?'<span class="lp-face lp-none">—</span>'
               :src?`<span class="lp-face"><img src="${src}" alt=""></span>`:'<span class="lp-face lp-none">＋</span>';
             return `<button type="button" data-blogo="${id}" ${pressed(b.logo===id)}>${face}<small>${n}</small></button>`}).join('')}</div>
           ${b.logo!=='none'?`<div class="seg bn-seg" role="group" aria-label="Logo 颜色">${TONES.map(([v,n])=>`<button type="button" data-bset="logoTone" data-v="${v}" ${pressed(b.logoTone===v)}>${n}</button>`).join('')}</div>
+          <div class="bn-lpos"><span class="lab">位置</span><div class="seg bn-seg" role="group" aria-label="Logo 位置">${LVS(b).map(([v,n])=>`<button type="button" data-bset="logoV" data-v="${v}" ${pressed(b.logoV===v)}>${n}</button>`).join('')}</div></div>
           ${slider('logoScale','Logo 大小',40,250,5,b.logoScale,FMT.logoScale)}<p class="bn-fit" id="bnLogoFit"></p>`:''}
         </div>
       </div></section>
