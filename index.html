@@ -474,8 +474,10 @@ body.vresizing,body.vresizing *{cursor:row-resize!important;user-select:none!imp
 .bn-tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:500;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
 .bn-tabs .btn{padding:6px 11px;font-size:12.5px;border-radius:999px}
 .bn-tabs .grow{flex:1 1 auto}
-.bn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;align-items:start}
-.bn-grid .grp{margin:0}
+.bn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;align-items:stretch}
+.bn-grid .grp{margin:0;display:flex;flex-direction:column}
+.bn-grid .grp-body{flex:1 1 auto}
+.bn-out{margin-top:auto}
 .bn-grid .grp>h2{display:flex;align-items:center;gap:9px;font-size:13.5px;letter-spacing:.02em;text-transform:none;color:var(--ink);padding-top:14px}
 .bn-grid .grp>h2 .mod-ic{width:28px;height:28px;border-radius:8px}
 .bn-grid .grp>h2 .mod-ic svg{width:15px;height:15px}
@@ -3737,11 +3739,6 @@ const SIZES=[
   {g:'背景布 / 桁架',items:[[3,2],[4,2.5],[6,3]]},
   {g:'竖幅',items:[[.8,2.5],[1,3]]}];
 const MATS=['横幅布','喷绘布','刀刮布','灯布','写真'];
-const TPLS=[
-  ['欢迎','热烈欢迎各位学员参加《{项目}》培训班'],
-  ['祝贺','热烈祝贺《{项目}》培训班圆满成功'],
-  ['开班','{单位}《{项目}》培训班'],
-  ['两行','{单位}\n《{项目}》培训班']];
 const LOGOS=[['none','无'],...Object.entries(BRAND_LOGOS).map(([id,b])=>[id,b.name]),['custom','上传']];
 const TONES=[['tint','同字色'],['color','原色'],['plate','白底']];
 
@@ -3749,7 +3746,7 @@ let uid=Date.now()%100000;
 const nb=(over={})=>({id:'b'+(uid++),text:'热烈欢迎各位学员参加培训班',w:8,h:.7,mat:'横幅布',qty:1,
   bg:'#e60012',fg:'#ffffff',font:'sans',bold:true,fill:66,size:0,spacing:12,pad:60,align:'center',dir:'auto',border:false,logoScale:100,logoV:'mid',
   logo:'none',logoData:'',logoTone:'tint',...over});
-const init=()=>({v:1,cur:0,view:'one',dpi:'auto',banners:[nb()],info:{client:'',project:'',contact:'',date:'',note:''}});
+const init=()=>({v:1,cur:0,view:'one',dpi:'auto',banners:[nb()]});
 
 const num=(v,a,b,d)=>{const n=Number(v);return Number.isFinite(n)?clamp(n,a,b):d};
 const hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v.toLowerCase():null;
@@ -3757,8 +3754,7 @@ function clean(s){
   const d=init();
   if(!s||typeof s!=='object'||!Array.isArray(s.banners)||!s.banners.length)return d;
   const out={v:1,view:s.view==='all'?'all':'one',dpi:['auto','72','100','150'].includes(String(s.dpi))?String(s.dpi):'auto',
-    info:{...d.info},banners:[]};
-  for(const k of Object.keys(d.info))out.info[k]=String(s.info?.[k]??'').slice(0,200);
+    banners:[]};
   for(const r of s.banners.slice(0,30)){
     const b=nb();
     b.text=String(r.text??b.text).slice(0,300);
@@ -4051,8 +4047,6 @@ function renderEdit(){
         <div class="f"><label for="bf-text">文字内容 <span class="opt">回车换行 = 多行</span></label>
           <textarea id="bf-text" data-bf="text" rows="3" placeholder="例：热烈欢迎各位学员参加培训班">${esc(b.text)}</textarea>
           <p class="bn-fit" id="bnFit" aria-live="polite"></p></div>
-        <div class="f"><span class="lab">常用模板 <span class="opt">会带入下方的单位和项目名称</span></span>
-          <div class="chips">${TPLS.map(([n],j)=>`<button type="button" class="chip" data-btpl="${j}">${n}</button>`).join('')}</div></div>
         <div class="two">
           <div class="f"><span class="lab">排列</span><div class="seg bn-seg" role="group" aria-label="排列方式">
             ${[['center','居中'],['spread','撑满']].map(([v,n])=>`<button type="button" data-bset="align" data-v="${v}" ${pressed(b.align===v)}>${n}</button>`).join('')}</div></div>
@@ -4106,15 +4100,8 @@ function renderEdit(){
         ${slider('pad',`${vert?'上下':'两端'}留白 <span class="opt">相对条幅${vert?'宽度':'高度'}</span>`,0,200,5,b.pad,FMT.pad)}
       </div></section>
 
-    <section class="grp"><h2><span class="mod-ic" aria-hidden="true">${IC.out}</span>确认单与导出</h2>
+    <section class="grp"><h2><span class="mod-ic" aria-hidden="true">${IC.out}</span>导出</h2>
       <div class="grp-body">
-        <div class="two">
-          <div class="f"><label for="bi-client">单位 / 客户</label><input id="bi-client" data-bi="client" placeholder="例：邮储银行商丘分行" value="${esc(S.info.client)}"></div>
-          <div class="f"><label for="bi-project">项目名称</label><input id="bi-project" data-bi="project" placeholder="例：不良资产处置能力提升" value="${esc(S.info.project)}"></div>
-          <div class="f"><label for="bi-contact">对接人 <span class="opt">选填</span></label><input id="bi-contact" data-bi="contact" value="${esc(S.info.contact)}"></div>
-          <div class="f"><label for="bi-date">使用日期 <span class="opt">选填</span></label><input id="bi-date" data-bi="date" placeholder="例：10月28日" value="${esc(S.info.date)}"></div>
-        </div>
-        <div class="f"><label for="bi-note">备注 <span class="opt">选填，写在确认单底部</span></label><input id="bi-note" data-bi="note" placeholder="例：四角打孔，周五前送到酒店" value="${esc(S.info.note)}"></div>
         <div class="f"><label for="bf-dpi">印刷分辨率</label><select id="bf-dpi" data-bdpi>
           ${[['auto','自动（大幅 72 dpi，小幅更高）'],['72','72 dpi · 喷绘常用'],['100','100 dpi'],['150','150 dpi · 近看物料']].map(([v,n])=>`<option value="${v}" ${S.dpi===v?'selected':''}>${n}</option>`).join('')}</select></div>
         <div class="bn-out">
@@ -4123,7 +4110,7 @@ function renderEdit(){
           <button type="button" class="btn" data-bexp="pdf">印刷 PDF</button>
           <button type="button" class="btn" data-bexp="jpg">印刷 JPG</button>
           <button type="button" class="btn" data-bexp="csv">打印单 CSV</button>
-          <small>确认单发给客户核对；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量；打印单可用 Excel 打开交给印刷厂。</small>
+          <small>确认单发给客户核对，只含条幅效果、尺寸和规格；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量；打印单可用 Excel 打开交给印刷厂。</small>
         </div>
       </div></section>
   </div>`;
@@ -4139,10 +4126,6 @@ function syncSizeUI(){
 }
 function syncTab(){
   const t=document.querySelector(`.bn-tab[data-btab="${S.cur}"] span`);if(t)t.textContent=linesOf(cur()).join(' ')||'空白条幅';
-}
-function fillTpl(t){
-  const u=S.info.client.trim()||'XX单位',p=S.info.project.trim().replace(/^《|》$/g,'').replace(/培训班$/,'')||'XX';
-  return t.replace('{单位}',u).replace('{项目}',p);
 }
 
 const bnEl=$('#bn');
@@ -4164,7 +4147,6 @@ bnEl.addEventListener('click',async e=>{
     const base=b.size||autoCm||Math.round(b.h*40);
     b.size=clamp(Math.round(base)+Number(d.bstep),1,500);changed();renderEdit();return}
   if(d.bact==='autosize'){b.size=0;changed();renderEdit();return}
-  if(d.btpl!==undefined){b.text=fillTpl(TPLS[+d.btpl][1]);changed();renderEdit();return}
   if(d.bset){b[d.bset]=d.v;changed();renderEdit();return}
   if(d.btog){b[d.btog]=!b[d.btog];changed();btn.setAttribute('aria-pressed',String(b[d.btog]));return}
   if(d.bcolor){b[d.bcolor]=d.v;changed();renderEdit();return}
@@ -4180,7 +4162,6 @@ bnEl.addEventListener('click',async e=>{
 bnEl.addEventListener('dblclick',e=>{if(e.target.closest('[data-blogo="custom"]'))$('#bnLogoFile').click()});
 bnEl.addEventListener('input',e=>{
   const t=e.target,b=cur();
-  if(t.dataset.bi!==undefined){S.info[t.dataset.bi]=t.value;changed(true);return}
   const k=t.dataset.bf;if(!k)return;
   if(k==='text'){b.text=t.value;syncTab();changed(true);return}
   if(k==='bg'||k==='fg'){b[k]=t.value;const sm=t.nextElementSibling;if(sm)sm.textContent='自定义 '+t.value.toUpperCase();
@@ -4216,7 +4197,6 @@ bnEl.addEventListener('change',async e=>{
   }
   if(k==='size'){if(t.value==='')b.size=0;else b.size=Math.round(num(t.value,1,500,b.size||autoCm)*10)/10;t.value=b.size||'';syncSizeUI();changed();return}
   if(k==='text'||k==='fill'||k==='spacing'||k==='pad'||k==='logoScale'||k==='bg'||k==='fg')bCommit();
-  if(t.dataset.bi!==undefined)bCommit();
 });
 
 /* ---------- tool switch ---------- */
@@ -4256,7 +4236,6 @@ new ResizeObserver(()=>{if(isBanner())paintSoon()}).observe($('#bnView'));
 const safe=s=>String(s||'').replace(/[\\/:*?"<>|\r\n\t]+/g,' ').replace(/\s+/g,' ').trim();
 const shortText=b=>safe(linesOf(b).join(' ')).slice(0,14);
 const baseName=(b,i)=>`条幅${String(i+1).padStart(2,'0')}_${cm(b.w)}x${cm(b.h)}cm_${safe(b.mat)}_${b.qty}${unitOf(b)}`;
-const proj=()=>safe(S.info.project).slice(0,20);
 function dpiFor(b){
   if(S.dpi!=='auto')return Number(S.dpi);
   const m=Math.max(b.w,b.h);return m>=3?72:m>=1.5?100:150;
@@ -4322,7 +4301,7 @@ function makePdf(pages,title){
 async function csvSheet(files){
   const logos=await Promise.all(S.banners.map(logoImg));
   const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  const rows=[['条幅打印单'],['单位 / 客户',S.info.client],['项目名称',S.info.project],['对接人',S.info.contact],['使用日期',S.info.date],['备注',S.info.note],['导出日期',stamp()],[],
+  const rows=[['条幅打印单'],['导出日期',stamp()],[],
     ['序号','条幅文字','宽（米）','高（米）','材质','数量','单位','底色','底色参考CMYK','字色','字色参考CMYK','字体','排列','字高约（厘米）','印刷文件']];
   S.banners.forEach((b,i)=>{
     const p=plan(document.createElement('canvas').getContext('2d'),b,b.w*100,b.h*100,logos[i]);
@@ -4352,16 +4331,7 @@ async function sheetCanvas(){
   c.textAlign='right';font(c,28);c.fillStyle=ink2;c.fillText(`共 ${list.length} 款 · ${list.reduce((a,b)=>a+b.qty,0)} ${list.every(b=>unitOf(b)==='条')?'条':'件'}`,W-M,y+4);
   c.fillText(`出图日期 ${stamp()}`,W-M,y+44);
   y+=84;
-  if(S.info.project.trim()){c.textAlign='left';c.fillStyle=ink2;font(c,34);c.fillText(S.info.project.trim(),M,y+30);y+=56}
-  y+=24;c.fillStyle=line;c.fillRect(M,y,CW,2);y+=40;
-  const cells=[['单位 / 客户',S.info.client],['对接人',S.info.contact],['项目名称',S.info.project],['使用日期',S.info.date]];
-  cells.forEach(([k,v],j)=>{
-    const x=M+(j%2)*(CW/2),yy=y+Math.floor(j/2)*86;
-    c.textAlign='left';font(c,24);c.fillStyle=ink3;c.fillText(k,x,yy+22);
-    font(c,32,true);c.fillStyle=v.trim()?ink:'#c3c9d4';
-    let t=v.trim()||'—';while(c.measureText(t).width>CW/2-40&&t.length>1)t=t.slice(0,-2)+'…';c.fillText(t,x,yy+64);
-  });
-  y+=86*2+20;
+  y+=20;
   for(let i=0;i<list.length;i++){
     const b=list[i];
     c.fillStyle=line;c.fillRect(M,y,CW,2);y+=52;
@@ -4400,8 +4370,6 @@ async function sheetCanvas(){
     y+=30;
   }
   c.fillStyle=line;c.fillRect(M,y,CW,2);y+=50;
-  if(S.info.note.trim()){font(c,22);c.fillStyle=ink3;c.textAlign='left';c.fillText('备注',M,y);y+=40;font(c,30);c.fillStyle=ink;
-    for(const l of wrapText(c,S.info.note.trim(),CW)){c.fillText(l,M,y);y+=44}y+=24}
   c.fillStyle='#fdf1f1';round(c,M,y,CW,118,16);c.fill();c.fillStyle=red;c.fillRect(M,y+22,6,74);
   font(c,29,true);c.fillStyle=ink;c.textAlign='left';c.fillText('请核对：文字有无错别字、尺寸、颜色和数量。',M+36,y+50);
   font(c,26);c.fillStyle=ink2;c.fillText('确认无误后请回复「确认」；需要修改请直接圈出或说明。',M+36,y+92);
@@ -4420,7 +4388,7 @@ async function runExport(kind,btn){
   bCommit();
   const label=btn.innerHTML,set=t=>{btn.textContent=t};
   btn.disabled=true;
-  const P=proj()?proj()+'-':'',tag=stamp();
+  const P='',tag=stamp();
   try{
     if(document.fonts?.ready)await document.fonts.ready;
     await fontsFor(S.banners);
@@ -4445,7 +4413,7 @@ async function runExport(kind,btn){
       toast(r==='declined'?'已取消保存':`已导出 ${jpgs.length} 张印刷图${capNote}`);return;
     }
     set('正在生成 PDF…');
-    const pdf=makePdf(jpgs,`${S.info.project||'条幅'} 印刷文件`);
+    const pdf=makePdf(jpgs,'条幅印刷文件');
     if(kind==='pdf'){const r=await offerFile(`${P}条幅印刷文件-${tag}.pdf`,pdf);toast(r==='declined'?'已取消保存':`PDF 已导出，${jpgs.length} 页，按实际尺寸${capNote}`);return}
     set('正在生成确认单…');
     const sheet=await toBlob(await sheetCanvas(),'image/png');
