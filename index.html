@@ -3822,16 +3822,19 @@ function plan(c,b,W,H,img){
   /* a backdrop (tall for its width) puts the logo above the text, a banner beside it */
   const stack=!!img&&!vert&&H/W>=.35&&n>0;
   const pxm=W/b.w,lk=(b.logoScale||100)/100;
+  /* a logo set to 上 floats: the text lays out as if it were not there, and the
+     two may share space; 中 / 下 keep reserving room for it */
+  const free=!!img&&b.logoV==='top';
   let textCross=cross*b.fill/100,logo=null;
   if(stack){
     let lc=Math.min(cross*.6,cross*(ar>2.2?.15:.24)*lk),lm=lc*ar;
     if(lm>main*.9){lc*=main*.9/lm;lm=main*.9}
     logo={cross:lc,main:lm,gap:lc*.38};
-    textCross=Math.max(textCross*.55,textCross-lc-logo.gap);
+    if(!free)textCross=Math.max(textCross*.55,textCross-lc-logo.gap);
   }
   /* 字号: a set size is the real glyph height in cm; 自动 takes the 字高 share */
   let glyph=n?(b.size>0?b.size/100*pxm:textCross/(n+(n-1)*gapK)):0;
-  const room=cross*.94-(stack?logo.cross+logo.gap:0);
+  const room=cross*.94-(stack&&!free?logo.cross+logo.gap:0);
   if(n&&b.size>0&&glyph*(n+(n-1)*gapK)>room)glyph=room/(n+(n-1)*gapK);
   const want=n&&b.size>0?b.size/100*pxm:glyph;
   if(img&&!stack){
@@ -3839,14 +3842,14 @@ function plan(c,b,W,H,img){
        as one line — and no logo takes more than a third of the length (more
        if it was enlarged on purpose) */
     const across=vert?1/ar:ar,block=n?glyph*(n+(n-1)*gapK):textCross;
-    let lc=across>2.2&&n?glyph*1.1:block*1.05;
+    let lc=free?cross*(across>2.2?.26:.4):across>2.2&&n?glyph*1.1:block*1.05;
     lc=Math.min(cross*.8,Math.max(cross*.22,lc))*lk;
     lc=Math.min(lc,cross*.95);
     let lm=lc*across;const cap=main*Math.min(.6,.32*Math.max(1,lk));
     if(lm>cap){lc*=cap/lm;lm=cap}
     logo={cross:lc,main:lm,gap:n?Math.min(lc*.32,cross*.25):0};
   }
-  const beside=logo&&!stack?logo.main+logo.gap:0;
+  const beside=logo&&!stack&&!free?logo.main+logo.gap:0;
   const avail=Math.max(main*.15,main-2*pad-beside);
   let px=glyph/gh;
   const charLen=(ch,p)=>{if(vert)return /\s/.test(ch)?p*.5:p*.98;setFace(c,b,p);return c.measureText(ch).width};
@@ -3875,7 +3878,7 @@ function plan(c,b,W,H,img){
     if(stack){
       const groupCross=logo.cross+logo.gap+blockCross,top=(cross-groupCross)/2;
       let ly=top;
-      if(lv==='top'){ly=edge;crossMid=(edge+logo.cross+logo.gap+cross-edge)/2;crossMid=Math.max(crossMid,ly+logo.cross+logo.gap+blockCross/2)}
+      if(lv==='top'){ly=edge;crossMid=cross/2}
       else if(lv==='bottom'){crossMid=top+blockCross/2;ly=top+blockCross+logo.gap}
       else crossMid=top+logo.cross+logo.gap+blockCross/2;
       logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
@@ -3884,11 +3887,11 @@ function plan(c,b,W,H,img){
       const endGap=Math.min(pad,main*.05);
       let ly=start;
       if(lv==='bottom'){textAt=start;ly=start+blockMain+logo.gap}
-      else if(lv==='top'){ly=endGap;const from=ly+logo.main+logo.gap;textAt=Math.max(from,(from+main-endGap-blockMain)/2)}
+      else if(lv==='top'){ly=endGap;textAt=start}
       logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
     }else{
       const ly=lv==='top'?edge:lv==='bottom'?cross-lh-edge:(cross-lh)/2;
-      logoBox={x:start,y:ly,w:lw,h:lh};
+      logoBox={x:lv==='top'?Math.max(edge,Math.min(pad,main*.02)):start,y:ly,w:lw,h:lh};
     }
   }
   return{want,pxm,vert,main,cross,px,glyph,scale,lines,lens,logo,logoBox,textAt,crossMid,blockMain,blockCross,gapK,g,stack};
@@ -3995,7 +3998,7 @@ async function paint(){
       +(tight?'，字偏小，可加长条幅或改两行':'');
   }
   if(lf)lf.textContent=p.logo
-    ?`Logo 约 ${Math.round((p.vert?p.logo.cross:p.logo.main)/pxm*100)} × ${Math.round((p.vert?p.logo.main:p.logo.cross)/pxm*100)} cm（宽 × 高）`:'';
+    ?`Logo 约 ${Math.round((p.vert?p.logo.cross:p.logo.main)/pxm*100)} × ${Math.round((p.vert?p.logo.main:p.logo.cross)/pxm*100)} cm（宽 × 高）${b.logoV==='top'?' · 放在上方时不占文字位置':''}`:'';
 }
 let paintRaf=0;const paintSoon=()=>{cancelAnimationFrame(paintRaf);paintRaf=requestAnimationFrame(paint)};
 
