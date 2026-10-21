@@ -520,7 +520,7 @@ body.vresizing,body.vresizing *{cursor:row-resize!important;user-select:none!imp
 .bn-logos button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);color:var(--accent);font-weight:600}
 .bn-logos .lp-face{width:100%;height:34px;padding:4px}
 .bn-logos .lp-none{font-size:15px;color:var(--ink-3);background:var(--sunk);box-shadow:none}
-.bn-out{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bn-out{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .bn-out .btn{justify-content:center;padding:10px 10px}
 .bn-out .btn.wide{grid-column:1/-1;padding:12px;font-size:14px}
 .bn-out small{grid-column:1/-1;font-size:11.5px;color:var(--ink-3);line-height:1.6}
@@ -4112,7 +4112,8 @@ function renderEdit(){
           <button type="button" class="btn" data-bexp="sheet">确认单图片</button>
           <button type="button" class="btn" data-bexp="pdf">印刷 PDF</button>
           <button type="button" class="btn" data-bexp="jpg">印刷 JPG</button>
-          <small>确认单是一张图，发给客户核对条幅效果、尺寸和文字；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量，交给印刷厂。</small>
+          <button type="button" class="btn" data-bexp="svg" title="CorelDRAW 打开后可另存为 CDR，文字可编辑">矢量 SVG（CDR 用）</button>
+          <small>确认单是一张图，发给客户核对条幅效果、尺寸和文字；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量，交给印刷厂。浏览器无法直接生成 CDR：矢量 SVG 按实际尺寸（毫米）、文字可编辑，用 CorelDRAW 打开后「另存为」CDR 即可。</small>
         </div>
       </div></section>
   </div>`;
@@ -4264,6 +4265,45 @@ function jpegDpi(u8,dpi){
   const out=new Uint8Array(u8.length+app.length);out.set(u8.subarray(0,2));out.set(app,2);out.set(u8.subarray(2),2+app.length);return out;
 }
 const toBlob=(cv,type,q)=>new Promise(r=>cv.toBlob(r,type,q));
+/* vector SVG for CorelDRAW (a browser cannot write .cdr): drawn in millimetres
+   at real size, text kept as live text in the Windows font names designers
+   have, the logo embedded as an image. Open it in CorelDRAW and save as CDR. */
+const SVG_FACE={sans:'SimHei, 黑体, Microsoft YaHei, PingFang SC, sans-serif',
+  serif:'SimSun, 宋体, Noto Serif SC, Songti SC, serif',kai:'KaiTi, 楷体, STKaiti, Kaiti SC, serif'};
+async function bannerSvg(b){
+  const img=await logoImg(b),W=Math.round(b.w*1000),H=Math.round(b.h*1000);
+  const c=document.createElement('canvas').getContext('2d');
+  const p=plan(c,b,W,H,img),f=v=>(Math.round(v*100)/100).toString(),out=[];
+  out.push(`<?xml version="1.0" encoding="UTF-8"?>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">`,
+    `<title>${esc(linesOf(b).join(' ')||'条幅')} ${m2(b.w)}×${m2(b.h)}米</title>`,
+    `<rect id="底色" x="0" y="0" width="${W}" height="${H}" fill="${b.bg}"/>`);
+  if(b.border){
+    const lw=Math.max(1,p.cross*.012),ins=Math.min(p.cross*.055,p.main*.03);
+    out.push(`<rect id="边框" x="${f(ins)}" y="${f(ins)}" width="${f(W-2*ins)}" height="${f(H-2*ins)}" fill="none" stroke="${b.fg}" stroke-opacity="0.9" stroke-width="${f(lw)}"/>`);
+  }
+  if(p.logoBox&&img){
+    const{x,y,w,h}=p.logoBox,t=b.logoTone;
+    if(t==='plate'){const m=Math.min(w,h)*.16;out.push(`<rect id="Logo衬板" x="${f(x-m)}" y="${f(y-m)}" width="${f(w+2*m)}" height="${f(h+2*m)}" rx="${f(m*1.2)}" fill="#ffffff"/>`)}
+    const src=t==='color'||t==='plate'?img.src:tinted(img,t==='white'?'#ffffff':b.fg).toDataURL('image/png');
+    out.push(`<image id="Logo" x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" preserveAspectRatio="none" xlink:href="${src}" href="${src}"/>`);
+  }
+  const k=p.px/200,asc=p.g.a*k,desc=p.g.d*k,step=p.glyph*(1+p.gapK);
+  const attrs=`font-family="${SVG_FACE[b.font]||SVG_FACE.sans}" font-size="${f(p.px)}"${b.bold?' font-weight="bold"':''} fill="${b.fg}"`;
+  out.push(`<g id="文字">`);
+  p.lines.forEach((line,i)=>{
+    const m=p.lens[i],chars=[...line];let pos=p.textAt+(p.blockMain-m.len)/2;
+    const crossC=p.vert?p.crossMid+p.blockCross/2-p.glyph/2-i*step:p.crossMid-p.blockCross/2+p.glyph/2+i*step;
+    if(p.vert){
+      chars.forEach((ch,j)=>{if(!/\s/.test(ch))out.push(`<text ${attrs} text-anchor="middle" x="${f(crossC)}" y="${f(pos+m.ws[j]/2+(asc-desc)/2)}">${esc(ch)}</text>`);pos+=m.ws[j]+m.gap});
+    }else{
+      const xs=chars.map((ch,j)=>{const x=pos;pos+=m.ws[j]+m.gap;return f(x)});
+      out.push(`<text ${attrs} x="${xs.join(' ')}" y="${f(crossC+(asc-desc)/2)}" xml:space="preserve">${esc(line)}</text>`);
+    }
+  });
+  out.push(`</g>`,`</svg>`);
+  return new Blob([out.join('\n')],{type:'image/svg+xml'});
+}
 async function printJpg(b){
   const{w,h,dpi,capped}=printPx(b),img=await logoImg(b);
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;
@@ -4371,6 +4411,13 @@ async function runExport(kind,btn){
       if(!blob)throw new Error('确认单编码失败');
       const r=await offerFile(`${P}条幅确认单-${tag}.png`,blob);toast(r==='declined'?'已取消保存':'确认单已导出，可直接发给客户');return;
     }
+    if(kind==='svg'){
+      set('正在生成 SVG…');
+      const files=[];for(let i=0;i<S.banners.length;i++)files.push({name:baseName(S.banners[i],i)+'.svg',blob:await bannerSvg(S.banners[i])});
+      const r=files.length===1?await offerFile(files[0].name,files[0].blob)
+        :await offerFile(`条幅矢量SVG-${tag}.zip`,makeZip(await Promise.all(files.map(async x=>({name:x.name,data:new Uint8Array(await x.blob.arrayBuffer())})))));
+      toast(r==='declined'?'已取消保存':`已导出 ${files.length} 个 SVG，用 CorelDRAW 打开后另存为 CDR 即可`);return;
+    }
     const jpgs=[];let capped=false;
     for(let i=0;i<S.banners.length;i++){
       set(`正在出图 ${i+1}/${S.banners.length}…`);
@@ -4396,8 +4443,10 @@ async function runExport(kind,btn){
       {name:'01_条幅确认单.png',data:await enc(sheet)},
       {name:'02_条幅印刷文件.pdf',data:await enc(pdf)},
       ...jpgs.map(j=>({name:'印刷图/'+j.name,data:j.data}))];
+    set('正在生成 SVG…');
+    for(let i=0;i<S.banners.length;i++)entries.push({name:'矢量SVG_CorelDRAW用/'+baseName(S.banners[i],i)+'.svg',data:await enc(await bannerSvg(S.banners[i]))});
     const r=await offerFile(`${P}条幅-${tag}.zip`,makeZip(entries));
-    toast(r==='declined'?'已取消保存':`已打包：确认单、PDF 和 ${jpgs.length} 张印刷图${capNote}`);
+    toast(r==='declined'?'已取消保存':`已打包：确认单、PDF、${jpgs.length} 张印刷图和矢量 SVG${capNote}`);
   }catch(err){toast(err.message||'导出失败')}
   finally{busy=false;btn.disabled=false;btn.innerHTML=label}
 }
