@@ -520,7 +520,7 @@ body.vresizing,body.vresizing *{cursor:row-resize!important;user-select:none!imp
 .bn-logos button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);color:var(--accent);font-weight:600}
 .bn-logos .lp-face{width:100%;height:34px;padding:4px}
 .bn-logos .lp-none{font-size:15px;color:var(--ink-3);background:var(--sunk);box-shadow:none}
-.bn-out{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bn-out{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .bn-out .btn{justify-content:center;padding:10px 10px}
 .bn-out .btn.wide{grid-column:1/-1;padding:12px;font-size:14px}
 .bn-out small{grid-column:1/-1;font-size:11.5px;color:var(--ink-3);line-height:1.6}
@@ -3725,7 +3725,7 @@ new ResizeObserver(()=>applyZoom()).observe($('#canvaswrap'));
    A second tool beside 长图交付: training banners drawn at true proportion,
    previewed on top and edited below, exported as a client confirmation sheet
    (PNG), print files at real size (JPG with DPI written in, multi-page PDF),
-   and a 打印单 CSV for the print shop — all in one ZIP if wanted.
+   all in one ZIP if wanted.
    It keeps its own draft and undo history; the long-image tool is untouched. */
 (()=>{
 const BN_STORE='delivery-banner-v1';
@@ -3941,13 +3941,6 @@ async function fontsFor(list){
 const m2=v=>(Math.round(v*100)/100).toFixed(2);
 const cm=v=>Math.round(v*100);
 const colorName=(v,list)=>{const p=list.find(x=>x[1]===v);return p?p[0]:'自定义'};
-const cmykOf=(v,list)=>{
-  const p=list.find(x=>x[1]===v);if(p)return p[2];
-  const[r,g,b]=rgb(v).map(x=>x/255),k=1-Math.max(r,g,b);
-  if(k>=1)return 'C0 M0 Y0 K100';
-  const f=x=>Math.round((1-x-k)/(1-k)*100);
-  return `约 C${f(r)} M${f(g)} Y${f(b)} K${Math.round(k*100)}`;
-};
 const unitOf=b=>/横幅|条幅/.test(b.mat)||isVert(b)&&b.w<1.5?'条':'张';
 const glyphCm=(b,p,pxPerM)=>Math.round(p.glyph/pxPerM*100);
 
@@ -4109,8 +4102,7 @@ function renderEdit(){
           <button type="button" class="btn" data-bexp="sheet">确认单图片</button>
           <button type="button" class="btn" data-bexp="pdf">印刷 PDF</button>
           <button type="button" class="btn" data-bexp="jpg">印刷 JPG</button>
-          <button type="button" class="btn" data-bexp="csv">打印单 CSV</button>
-          <small>确认单发给客户核对，只含条幅效果、尺寸和规格；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量；打印单可用 Excel 打开交给印刷厂。</small>
+          <small>确认单是一张图，发给客户核对条幅效果、尺寸和文字；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量，交给印刷厂。</small>
         </div>
       </div></section>
   </div>`;
@@ -4298,19 +4290,6 @@ function makePdf(pages,title){
   put(x+`trailer\n<< /Size ${total} /Root 1 0 R /Info 3 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
   return new Blob(chunks,{type:'application/pdf'});
 }
-async function csvSheet(files){
-  const logos=await Promise.all(S.banners.map(logoImg));
-  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  const rows=[['条幅打印单'],['导出日期',stamp()],[],
-    ['序号','条幅文字','宽（米）','高（米）','材质','数量','单位','底色','底色参考CMYK','字色','字色参考CMYK','字体','排列','字高约（厘米）','印刷文件']];
-  S.banners.forEach((b,i)=>{
-    const p=plan(document.createElement('canvas').getContext('2d'),b,b.w*100,b.h*100,logos[i]);
-    rows.push([i+1,linesOf(b).join(' / '),m2(b.w),m2(b.h),b.mat,b.qty,unitOf(b),`${colorName(b.bg,BG)} ${b.bg.toUpperCase()}`,cmykOf(b.bg,BG),
-      `${colorName(b.fg,FG)} ${b.fg.toUpperCase()}`,cmykOf(b.fg,FG),(FONTS.find(x=>x[0]===b.font)||FONTS[0])[1]+(b.bold?' 加粗':''),
-      (isVert(b)?'竖排':'横排')+' · '+(b.align==='spread'?'撑满':'居中'),Math.round(p.glyph),files?.[i]||'']);
-  });
-  return new Blob(['﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
-}
 function wrapText(c,text,maxW){
   const out=[];for(const para of String(text).split('\n')){let line='';
     for(const ch of para){if(c.measureText(line+ch).width>maxW&&line){out.push(line);line=ch}else line+=ch}
@@ -4318,7 +4297,7 @@ function wrapText(c,text,maxW){
   return out;
 }
 /* client confirmation sheet: every banner at true proportion with its
-   dimensions marked, the specs underneath, and a line to sign */
+   dimensions marked and its wording underneath — one image, nothing else */
 async function sheetCanvas(){
   await fontsFor(S.banners);
   const W=1800,M=90,CW=W-2*M,list=S.banners,loaded=await Promise.all(list.map(logoImg));
@@ -4343,7 +4322,7 @@ async function sheetCanvas(){
     bw=Math.round(bw);bh=Math.max(20,Math.round(bh));
     const bx=M+Math.round((maxW-bw)/2);
     const tile=document.createElement('canvas');tile.width=bw*2;tile.height=bh*2;
-    const p=drawBanner(tile.getContext('2d'),b,tile.width,tile.height,loaded[i]);
+    drawBanner(tile.getContext('2d'),b,tile.width,tile.height,loaded[i]);
     c.save();c.shadowColor='#1a203033';c.shadowBlur=24;c.shadowOffsetY=8;c.drawImage(tile,bx,y,bw,bh);c.restore();
     if(b.bg==='#ffffff'){c.strokeStyle=line;c.lineWidth=2;c.strokeRect(bx,y,bw,bh)}
     /* dimension lines */
@@ -4357,27 +4336,12 @@ async function sheetCanvas(){
     c.fillStyle='#ffffff';c.fillRect(-lw2/2,-16,lw2,32);c.fillStyle=ink;c.fillText(lab2,0,0);c.restore();
     c.textBaseline='alphabetic';
     y=dy+56;
-    const specs=[['底色',`${colorName(b.bg,BG)} ${b.bg.toUpperCase()}`],['字色',`${colorName(b.fg,FG)} ${b.fg.toUpperCase()}`],
-      ['字体',(FONTS.find(x=>x[0]===b.font)||FONTS[0])[1]+(b.bold?' · 加粗':'')],['字高',`约 ${glyphCm(b,p,tile.width/b.w)} 厘米`]];
-    const sw=CW/4;
-    specs.forEach(([k,v],j)=>{const x=M+j*sw;c.textAlign='left';font(c,22);c.fillStyle=ink3;c.fillText(k,x,y);
-      if(j<2){c.fillStyle=j?b.fg:b.bg;round(c,x,y+16,30,30,6);c.fill();c.strokeStyle='#00000022';c.lineWidth=1.5;c.stroke()}
-      font(c,28,true);c.fillStyle=ink;c.fillText(v,x+(j<2?42:0),y+42)});
-    y+=86;
     font(c,22);c.fillStyle=ink3;c.textAlign='left';c.fillText('文字内容',M,y);y+=40;
     font(c,32,true);c.fillStyle=ink;
     for(const l of wrapText(c,linesOf(b).join('\n')||'（空）',CW)){c.fillText(l,M,y);y+=46}
     y+=30;
   }
-  c.fillStyle=line;c.fillRect(M,y,CW,2);y+=50;
-  c.fillStyle='#fdf1f1';round(c,M,y,CW,118,16);c.fill();c.fillStyle=red;c.fillRect(M,y+22,6,74);
-  font(c,29,true);c.fillStyle=ink;c.textAlign='left';c.fillText('请核对：文字有无错别字、尺寸、颜色和数量。',M+36,y+50);
-  font(c,26);c.fillStyle=ink2;c.fillText('确认无误后请回复「确认」；需要修改请直接圈出或说明。',M+36,y+92);
-  y+=118+70;
-  font(c,30);c.fillStyle=ink;c.fillText('客户确认：',M,y);c.fillText('日期：',M+CW/2+40,y);
-  c.fillStyle=ink3;c.fillRect(M+158,y+10,CW/2-200,2);c.fillRect(M+CW/2+136,y+10,CW/2-136,2);
-  y+=60;font(c,21);c.fillStyle=ink3;c.fillText('屏幕显示与实物印刷存在色差，颜色以印刷厂打样为准。',M,y);
-  y+=M-20;
+  y+=M-50;
   const out=document.createElement('canvas');out.width=W;out.height=Math.ceil(y);
   out.getContext('2d').drawImage(cv,0,0);cv.width=cv.height=1;
   return out;
@@ -4397,8 +4361,6 @@ async function runExport(kind,btn){
       if(!blob)throw new Error('确认单编码失败');
       const r=await offerFile(`${P}条幅确认单-${tag}.png`,blob);toast(r==='declined'?'已取消保存':'确认单已导出，可直接发给客户');return;
     }
-    if(kind==='csv'){const r=await offerFile(`${P}条幅打印单-${tag}.csv`,await csvSheet(S.banners.map((b,i)=>baseName(b,i)+'.jpg')));
-      toast(r==='declined'?'已取消保存':'打印单已导出，可用 Excel 打开');return}
     const jpgs=[];let capped=false;
     for(let i=0;i<S.banners.length;i++){
       set(`正在出图 ${i+1}/${S.banners.length}…`);
@@ -4422,11 +4384,10 @@ async function runExport(kind,btn){
     const enc=async bl=>new Uint8Array(await bl.arrayBuffer());
     const entries=[
       {name:'01_条幅确认单.png',data:await enc(sheet)},
-      {name:'02_条幅打印单.csv',data:await enc(await csvSheet(jpgs.map(j=>'印刷图/'+j.name)))},
-      {name:'03_条幅印刷文件.pdf',data:await enc(pdf)},
+      {name:'02_条幅印刷文件.pdf',data:await enc(pdf)},
       ...jpgs.map(j=>({name:'印刷图/'+j.name,data:j.data}))];
     const r=await offerFile(`${P}条幅-${tag}.zip`,makeZip(entries));
-    toast(r==='declined'?'已取消保存':`已打包：确认单、打印单、PDF 和 ${jpgs.length} 张印刷图${capNote}`);
+    toast(r==='declined'?'已取消保存':`已打包：确认单、PDF 和 ${jpgs.length} 张印刷图${capNote}`);
   }catch(err){toast(err.message||'导出失败')}
   finally{busy=false;btn.disabled=false;btn.innerHTML=label}
 }
