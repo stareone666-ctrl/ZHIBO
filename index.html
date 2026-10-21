@@ -500,6 +500,14 @@ body.vresizing,body.vresizing *{cursor:row-resize!important;user-select:none!imp
 .bn-edit input[type=number]::-webkit-inner-spin-button,.bn-edit input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .bn-edit input[type=number]:focus{background:var(--raise);border-color:var(--accent);outline:none}
 .bn-fit{margin:0;font-size:12px;color:var(--ink-3)}
+.bn-fit:empty{display:none}
+.bn-size{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bn-step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--sunk);overflow:hidden}
+.bn-step button{border:0;background:none;width:34px;height:36px;font-size:17px;color:var(--ink-2)}
+.bn-step button:hover{background:var(--raise);color:var(--accent)}
+.bn-edit .bn-step input{width:70px;padding:0;border:0;border-radius:0;background:transparent;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
+.bn-edit .bn-step input:focus{background:var(--raise)}
+.bn-u{font-size:12.5px;color:var(--ink-2)}
 .bn-fit b{color:var(--ink);font-weight:500}
 .bn-fit.warn{color:var(--accent)}
 .bn-logos{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
@@ -3738,7 +3746,7 @@ const TONES=[['tint','同字色'],['color','原色'],['plate','白底']];
 
 let uid=Date.now()%100000;
 const nb=(over={})=>({id:'b'+(uid++),text:'热烈欢迎各位学员参加培训班',w:8,h:.7,mat:'横幅布',qty:1,
-  bg:'#e60012',fg:'#ffffff',font:'sans',bold:true,fill:66,spacing:12,pad:60,align:'center',dir:'auto',border:false,
+  bg:'#e60012',fg:'#ffffff',font:'sans',bold:true,fill:66,size:0,spacing:12,pad:60,align:'center',dir:'auto',border:false,logoScale:100,
   logo:'none',logoData:'',logoTone:'tint',...over});
 const init=()=>({v:1,cur:0,view:'one',dpi:'auto',banners:[nb()],info:{client:'',project:'',contact:'',date:'',note:''}});
 
@@ -3757,7 +3765,7 @@ function clean(s){
     b.mat=MATS.includes(r.mat)?r.mat:(typeof r.mat==='string'&&r.mat.trim()?r.mat.trim().slice(0,20):b.mat);
     b.bg=hex(r.bg)||b.bg;b.fg=hex(r.fg)||b.fg;
     b.font=FONTS.some(f=>f[0]===r.font)?r.font:'sans';b.bold=r.bold!==false;
-    b.fill=num(r.fill,30,90,66);b.spacing=num(r.spacing,0,80,12);b.pad=num(r.pad,0,200,60);
+    b.fill=num(r.fill,30,90,66);b.size=Math.round(num(r.size,0,500,0)*10)/10;b.logoScale=num(r.logoScale,40,250,100);b.spacing=num(r.spacing,0,80,12);b.pad=num(r.pad,0,200,60);
     b.align=r.align==='spread'?'spread':'center';b.dir=['auto','h','v'].includes(r.dir)?r.dir:'auto';b.border=!!r.border;
     b.logo=LOGOS.some(l=>l[0]===r.logo)?r.logo:'none';b.logoData=typeof r.logoData==='string'?r.logoData:'';
     if(b.logo==='custom'&&!b.logoData)b.logo='none';
@@ -3816,22 +3824,29 @@ function plan(c,b,W,H,img){
   const ar=img?(img.width/img.height||1):1;
   /* a backdrop (tall for its width) puts the logo above the text, a banner beside it */
   const stack=!!img&&!vert&&H/W>=.35&&n>0;
+  const pxm=W/b.w,lk=(b.logoScale||100)/100;
   let textCross=cross*b.fill/100,logo=null;
   if(stack){
-    let lc=cross*(ar>2.2?.15:.24),lm=lc*ar;
-    if(lm>main*.8){lc*=main*.8/lm;lm=main*.8}
+    let lc=Math.min(cross*.6,cross*(ar>2.2?.15:.24)*lk),lm=lc*ar;
+    if(lm>main*.9){lc*=main*.9/lm;lm=main*.9}
     logo={cross:lc,main:lm,gap:lc*.38};
     textCross=Math.max(textCross*.55,textCross-lc-logo.gap);
   }
-  let glyph=n?textCross/(n+(n-1)*gapK):0;
+  /* 字号: a set size is the real glyph height in cm; 自动 takes the 字高 share */
+  let glyph=n?(b.size>0?b.size/100*pxm:textCross/(n+(n-1)*gapK)):0;
+  const room=cross*.94-(stack?logo.cross+logo.gap:0);
+  if(n&&b.size>0&&glyph*(n+(n-1)*gapK)>room)glyph=room/(n+(n-1)*gapK);
+  const want=n&&b.size>0?b.size/100*pxm:glyph;
   if(img&&!stack){
     /* a square mark stands as tall as the text block; a wide wordmark as tall
-       as one line — and no logo takes more than a third of the length */
-    const across=vert?1/ar:ar;
-    let lc=across>2.2&&n?glyph*1.1:textCross*1.05;
-    lc=Math.min(cross*.8,Math.max(cross*.22,lc));
-    let lm=lc*across;
-    if(lm>main*.32){lc*=main*.32/lm;lm=main*.32}
+       as one line — and no logo takes more than a third of the length (more
+       if it was enlarged on purpose) */
+    const across=vert?1/ar:ar,block=n?glyph*(n+(n-1)*gapK):textCross;
+    let lc=across>2.2&&n?glyph*1.1:block*1.05;
+    lc=Math.min(cross*.8,Math.max(cross*.22,lc))*lk;
+    lc=Math.min(lc,cross*.95);
+    let lm=lc*across;const cap=main*Math.min(.6,.32*Math.max(1,lk));
+    if(lm>cap){lc*=cap/lm;lm=cap}
     logo={cross:lc,main:lm,gap:n?Math.min(lc*.32,cross*.25):0};
   }
   const beside=logo&&!stack?logo.main+logo.gap:0;
@@ -3863,7 +3878,7 @@ function plan(c,b,W,H,img){
       textAt=(main-blockMain)/2;
     }else logoBox={x:vert?(W-lw)/2:start,y:vert?start:(H-lh)/2,w:lw,h:lh};
   }
-  return{vert,main,cross,px,glyph,scale,lines,lens,logo,logoBox,textAt,crossMid,blockMain,blockCross,gapK,g,stack};
+  return{want,pxm,vert,main,cross,px,glyph,scale,lines,lens,logo,logoBox,textAt,crossMid,blockMain,blockCross,gapK,g,stack};
 }
 function drawBanner(c,b,W,H,img,opt={}){
   c.save();
@@ -3924,7 +3939,7 @@ const unitOf=b=>/横幅|条幅/.test(b.mat)||isVert(b)&&b.w<1.5?'条':'张';
 const glyphCm=(b,p,pxPerM)=>Math.round(p.glyph/pxPerM*100);
 
 /* ---------- preview ---------- */
-let paintRev=0;
+let paintRev=0,autoCm=0;
 async function paint(){
   const rev=++paintRev,view=$('#bnView');if(!view||!isBanner())return;
   const list=S.view==='all'?S.banners.map((b,i)=>[b,i]):[[cur(),S.cur]];
@@ -3959,16 +3974,22 @@ async function paint(){
   const b=cur();
   const dims=$('#bnDims');
   dims.innerHTML=`条幅 ${S.cur+1} / ${S.banners.length} · <b>${m2(b.w)} × ${m2(b.h)} m</b> · ${esc(b.mat)} · ${b.qty} ${unitOf(b)}`;
-  const fit=$('#bnFit');
-  if(fit&&curPlan){
-    const{p,pxm}=curPlan;
-    if(!p.lines.length){fit.className='bn-fit';fit.textContent='还没有文字'}
-    else{
-      const tight=p.scale<.7&&p.lines.length===1;
-      fit.className='bn-fit'+(tight?' warn':'');
-      fit.innerHTML=`字高约 <b>${glyphCm(b,p,pxm)} cm</b>${isVert(b)?' · 竖排':''}`+(p.scale<.97?' · 已按字数自动适配':'')+(tight?'，字偏小，可加长条幅或改两行':'');
-    }
+  if(!curPlan)return;
+  const{p,pxm}=curPlan,fit=$('#bnFit'),lf=$('#bnLogoFit');
+  if(fit&&!p.lines.length){fit.className='bn-fit';fit.textContent='还没有文字'}
+  else if(fit){
+    const now=glyphCm(b,p,pxm),manual=b.size>0;
+    autoCm=now;
+    const inp=$('#bf-size');if(inp&&!manual)inp.placeholder=`自动 ${now}`;
+    const over=manual&&now<b.size-.5;
+    const tight=!manual&&p.scale<.7&&p.lines.length===1;
+    fit.className='bn-fit'+(over||tight?' warn':'');
+    fit.innerHTML=`字高约 <b>${now} cm</b>${isVert(b)?' · 竖排':''}`
+      +(over?` · 设定 ${b.size} cm 放不下，已缩到 ${now} cm`:!manual&&p.scale<.97?' · 已按字数自动适配':'')
+      +(tight?'，字偏小，可加长条幅或改两行':'');
   }
+  if(lf)lf.textContent=p.logo
+    ?`Logo 约 ${Math.round((p.vert?p.logo.cross:p.logo.main)/pxm*100)} × ${Math.round((p.vert?p.logo.main:p.logo.cross)/pxm*100)} cm（宽 × 高）`:'';
 }
 let paintRaf=0;const paintSoon=()=>{cancelAnimationFrame(paintRaf);paintRaf=requestAnimationFrame(paint)};
 
@@ -3981,7 +4002,7 @@ const IC={
 const pressed=v=>`aria-pressed="${!!v}"`;
 const slider=(k,label,min,max,step,val,fmt)=>`<div class="slide"><label class="lab" for="bf-${k}">${label}</label><output id="bo-${k}">${fmt(val)}</output>
   <input type="range" id="bf-${k}" data-bf="${k}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
-const FMT={fill:v=>v+'%',spacing:v=>v+'%',pad:v=>v+'%'};
+const FMT={fill:v=>v+'%',spacing:v=>v+'%',pad:v=>v+'%',logoScale:v=>v+'%'};
 function swatches(k,list,val){
   const custom=!list.some(x=>x[1]===val);
   return `<div class="bn-sws">${list.map(([n,v])=>`<button type="button" class="bn-sw" style="background:${v}" title="${n} ${v}" aria-label="${n}" data-bcolor="${k}" data-v="${v}" ${pressed(v===val)}></button>`).join('')}
@@ -4020,7 +4041,8 @@ function renderEdit(){
             const face=id==='none'?'<span class="lp-face lp-none">—</span>'
               :src?`<span class="lp-face"><img src="${src}" alt=""></span>`:'<span class="lp-face lp-none">＋</span>';
             return `<button type="button" data-blogo="${id}" ${pressed(b.logo===id)}>${face}<small>${n}</small></button>`}).join('')}</div>
-          ${b.logo!=='none'?`<div class="seg bn-seg" role="group" aria-label="Logo 颜色">${TONES.map(([v,n])=>`<button type="button" data-bset="logoTone" data-v="${v}" ${pressed(b.logoTone===v)}>${n}</button>`).join('')}</div>`:''}
+          ${b.logo!=='none'?`<div class="seg bn-seg" role="group" aria-label="Logo 颜色">${TONES.map(([v,n])=>`<button type="button" data-bset="logoTone" data-v="${v}" ${pressed(b.logoTone===v)}>${n}</button>`).join('')}</div>
+          ${slider('logoScale','Logo 大小',40,250,5,b.logoScale,FMT.logoScale)}<p class="bn-fit" id="bnLogoFit"></p>`:''}
         </div>
       </div></section>
 
@@ -4049,7 +4071,12 @@ function renderEdit(){
           <div class="f"><span class="lab">字重与边框</span><div class="seg bn-seg" role="group" aria-label="字重与边框">
             <button type="button" data-btog="bold" ${pressed(b.bold)}>加粗</button><button type="button" data-btog="border" ${pressed(b.border)}>细边框</button></div></div>
         </div>
-        ${slider('fill','字高 <span class="opt">占条幅高度</span>',30,90,1,b.fill,FMT.fill)}
+        <div class="f"><label for="bf-size">字号 <span class="opt">实际字高，留空 = 自动</span></label>
+          <div class="bn-size"><span class="bn-step"><button type="button" data-bstep="-1" aria-label="字号减小">−</button>
+            <input id="bf-size" data-bf="size" type="number" inputmode="decimal" min="1" max="500" step="1" value="${b.size||''}" placeholder="自动">
+            <button type="button" data-bstep="1" aria-label="字号增大">＋</button></span><span class="bn-u">厘米</span>
+            <button type="button" class="hl-auto" data-bact="autosize" ${b.size?'':'hidden'}>恢复自动</button></div></div>
+        <div id="bnFillRow" ${b.size?'hidden':''}>${slider('fill','自动字高 <span class="opt">占条幅高度</span>',30,90,1,b.fill,FMT.fill)}</div>
         ${slider('spacing','字距',0,80,1,b.spacing,FMT.spacing)}
         ${slider('pad',`${vert?'上下':'两端'}留白 <span class="opt">相对条幅${vert?'宽度':'高度'}</span>`,0,200,5,b.pad,FMT.pad)}
       </div></section>
@@ -4077,6 +4104,14 @@ function renderEdit(){
   </div>`;
   ed.scrollTop=keep;
 }
+/* small in-place updates, so leaving a field never rebuilds the editor
+   (a rebuild on blur would swallow the click that caused the blur) */
+function syncSizeUI(){
+  const b=cur(),fr=$('#bnFillRow'),au=document.querySelector('[data-bact="autosize"]');
+  if(fr)fr.hidden=b.size>0;if(au)au.hidden=!(b.size>0);
+  document.querySelectorAll('[data-bsize]').forEach(x=>{const[w,h]=x.dataset.bsize.split('x').map(Number);x.setAttribute('aria-pressed',String(Math.abs(b.w-w)<.001&&Math.abs(b.h-h)<.001))});
+  const u=$('#bf-qty')?.nextElementSibling;if(u)u.textContent=unitOf(b);
+}
 function syncTab(){
   const t=document.querySelector(`.bn-tab[data-btab="${S.cur}"] span`);if(t)t.textContent=linesOf(cur()).join(' ')||'空白条幅';
 }
@@ -4100,6 +4135,10 @@ bnEl.addEventListener('click',async e=>{
     const before=JSON.stringify(S);S.banners.splice(S.cur,1);S.cur=clamp(S.cur,0,S.banners.length-1);changed();renderEdit();
     toast('已删除条幅',{label:'撤销',run:()=>{bFuture.push(bMark);bRestore(before)}});return;
   }
+  if(d.bstep){
+    const base=b.size||autoCm||Math.round(b.h*40);
+    b.size=clamp(Math.round(base)+Number(d.bstep),1,500);changed();renderEdit();return}
+  if(d.bact==='autosize'){b.size=0;changed();renderEdit();return}
   if(d.btpl!==undefined){b.text=fillTpl(TPLS[+d.btpl][1]);changed();renderEdit();return}
   if(d.bset){b[d.bset]=d.v;changed();renderEdit();return}
   if(d.btog){b[d.btog]=!b[d.btog];changed();btn.setAttribute('aria-pressed',String(b[d.btog]));return}
@@ -4123,13 +4162,16 @@ bnEl.addEventListener('input',e=>{
     t.parentElement.querySelectorAll('.bn-sw').forEach(s=>s.setAttribute('aria-pressed',String(s.dataset.v===t.value)));
     const tab=document.querySelector(`.bn-tab[data-btab="${S.cur}"] i`);if(tab){tab.style.background=b.bg;tab.style.color=b.fg}
     changed(true);return}
-  if(k==='fill'||k==='spacing'||k==='pad'){b[k]=Number(t.value);$('#bo-'+k).textContent=FMT[k](b[k]);changed(true);return}
+  if(k==='size'){
+    if(t.value===''){if(b.size){b.size=0;syncSizeUI();changed(true)}return}
+    const v=Number(t.value);if(!Number.isFinite(v)||v<1||v>500)return;
+    b.size=Math.round(v*10)/10;syncSizeUI();changed(true);return}
+  if(k==='fill'||k==='spacing'||k==='pad'||k==='logoScale'){b[k]=Number(t.value);$('#bo-'+k).textContent=FMT[k](b[k]);changed(true);return}
   if(k==='w'||k==='h'||k==='qty'){
     const lim={w:[.2,50],h:[.2,20],qty:[1,999]}[k],v=Number(t.value);
     if(t.value===''||!Number.isFinite(v)||v<lim[0]||v>lim[1])return;   /* wait until the number is complete */
     b[k]=k==='qty'?Math.round(v):Math.round(v*100)/100;
-    document.querySelectorAll('[data-bsize]').forEach(x=>{const[w,h]=x.dataset.bsize.split('x').map(Number);x.setAttribute('aria-pressed',String(Math.abs(b.w-w)<.001&&Math.abs(b.h-h)<.001))});
-    changed(true);return}
+    syncSizeUI();changed(true);return}
 });
 bnEl.addEventListener('change',async e=>{
   const t=e.target,b=cur();
@@ -4145,9 +4187,10 @@ bnEl.addEventListener('change',async e=>{
   if(k==='w'||k==='h'||k==='qty'){
     const lim={w:[.2,50],h:[.2,20],qty:[1,999]}[k];
     b[k]=k==='qty'?Math.round(num(t.value,...lim,b[k])):Math.round(num(t.value,...lim,b[k])*100)/100;
-    changed();renderEdit();return;
+    t.value=b[k];syncSizeUI();changed();return;
   }
-  if(k==='text'||k==='fill'||k==='spacing'||k==='pad'||k==='bg'||k==='fg'){bCommit();if(k==='bg'||k==='fg')renderEdit()}
+  if(k==='size'){if(t.value==='')b.size=0;else b.size=Math.round(num(t.value,1,500,b.size||autoCm)*10)/10;t.value=b.size||'';syncSizeUI();changed();return}
+  if(k==='text'||k==='fill'||k==='spacing'||k==='pad'||k==='logoScale'||k==='bg'||k==='fg')bCommit();
   if(t.dataset.bi!==undefined)bCommit();
 });
 
