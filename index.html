@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="把图文内容编排成 1080 宽的交付长图：一键导入 Word 或 AI 文字稿，8 套版式、17 种底纹、局部加粗、按比例切图，全部在浏览器本地完成。">
+<meta name="description" content="把图文内容编排成 1080 宽的交付长图：一键导入 Word 或 AI 文字稿，8 套版式、17 种底纹、局部加粗、按比例切图，全部在浏览器本地完成。另有条幅预览：按真实尺寸预览条幅，导出确认单和印刷文件。">
 <title>长图交付</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -414,6 +414,128 @@ details.fold[data-fold="图文篇章"]>.grp-body{background:var(--sunk);padding:
   .btn.primary .label{display:inline}
   .two{grid-template-columns:1fr}
 }
+/* ---------- tool switch: 长图交付 / 条幅预览 ---------- */
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.toolswitch{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:999px;
+  background:var(--sunk);border:1px solid var(--line);isolation:isolate}
+.ts-thumb{position:absolute;z-index:-1;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:var(--accent);
+  box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 40%,transparent);transition:transform .34s cubic-bezier(.3,1.25,.5,1)}
+.toolswitch[data-on="banner"] .ts-thumb{transform:translateX(100%)}
+.toolswitch button{border:0;background:none;padding:6px 15px;border-radius:999px;font-size:14.5px;font-weight:700;letter-spacing:.06em;
+  color:var(--ink-2);white-space:nowrap;transition:color .2s}
+.toolswitch button:hover{color:var(--ink)}
+.toolswitch button[aria-selected="true"]{color:var(--accent-ink)}
+
+/* ---------- 条幅预览: preview on top, editor below ---------- */
+.bn{flex:1 1 auto;min-height:0;display:none;flex-direction:column;background:var(--paper)}
+body[data-tool="banner"] .bn{display:flex}
+body[data-tool="banner"] .work,body[data-tool="banner"] .viewswitch,body[data-tool="banner"] #exportBtn{display:none!important}
+body:not([data-tool="banner"]) .bn-only{display:none!important}
+.bn-stage{flex:0 0 auto;height:var(--bn-ph,42vh);min-height:150px;display:flex;flex-direction:column;background:var(--panel)}
+.bn-bar{flex:0 0 auto;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line-soft)}
+.bn-bar .dims{min-width:0}
+.bn-bar .grow{flex:1 1 auto}
+.bn-view{position:relative;flex:1 1 auto;min-height:0;overflow:auto;padding:18px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:22px;
+  background:
+    linear-gradient(45deg,var(--line-soft) 25%,transparent 25%,transparent 75%,var(--line-soft) 75%) 0 0/22px 22px,
+    linear-gradient(45deg,var(--line-soft) 25%,transparent 25%,transparent 75%,var(--line-soft) 75%) 11px 11px/22px 22px,
+    var(--paper)}
+.bn-view[data-mode="one"]{justify-content:center}
+.bn-fig{margin:0;display:flex;flex-direction:column;gap:7px;flex:0 0 auto}
+.bn-view[data-mode="all"] .bn-fig{cursor:pointer}
+.bn-cap{display:flex;gap:8px;align-items:baseline;font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+.bn-cap b{color:var(--ink);font-weight:600}
+.bn-fg{display:grid;grid-template-columns:auto 30px;grid-template-rows:auto 20px;column-gap:8px;row-gap:6px}
+.bn-fg canvas{display:block;border-radius:2px;box-shadow:0 1px 3px #1a203033,0 12px 30px #1a203026}
+.bn-view[data-mode="all"] .bn-fig[aria-current="true"] canvas{outline:2.5px solid var(--accent);outline-offset:4px}
+.bn-hd,.bn-vd{position:relative;color:var(--ink-3)}
+.bn-hd{border-inline:1px solid currentColor;height:12px;margin-top:2px}
+.bn-hd::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid currentColor}
+.bn-vd{border-block:1px solid currentColor;width:12px}
+.bn-vd::before{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px solid currentColor}
+.bn-hd span,.bn-vd span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0 6px;border-radius:4px;background:var(--paper);
+  color:var(--ink);font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.5}
+.bn-vd span{transform:translate(-50%,-50%) rotate(90deg)}
+.bn-empty{margin:auto;font-size:13px;color:var(--ink-3)}
+.bn-split{flex:0 0 12px;position:relative;cursor:row-resize;touch-action:none;background:var(--paper);outline-offset:-3px}
+.bn-split::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+.bn-split span{position:absolute;left:50%;top:50%;width:46px;height:6px;border-radius:4px;transform:translate(-50%,-50%);background:var(--line);transition:background .15s,width .15s}
+.bn-split:hover span,.bn-split:focus-visible span,.bn-split.dragging span{background:var(--accent);width:64px}
+body.vresizing,body.vresizing *{cursor:row-resize!important;user-select:none!important}
+.bn-edit{flex:1 1 auto;min-height:0;overflow:auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));overscroll-behavior:contain}
+.bn-tabs{position:sticky;top:0;z-index:2;display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:12px 0;margin-bottom:2px;background:var(--paper);
+  box-shadow:0 10px 10px -10px color-mix(in srgb,var(--paper) 100%,transparent)}
+.bn-tab{display:inline-flex;align-items:center;gap:8px;max-width:240px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:999px;background:var(--raise);
+  color:var(--ink-2);font-size:13px;transition:border-color .15s,background .15s}
+.bn-tab:hover{border-color:var(--ink-3)}
+.bn-tab i{flex:0 0 auto;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-family:var(--mono);font-size:12px;font-weight:600;
+  box-shadow:inset 0 0 0 1px #0002}
+.bn-tab span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bn-tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:500;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
+.bn-tabs .btn{padding:6px 11px;font-size:12.5px;border-radius:999px}
+.bn-tabs .grow{flex:1 1 auto}
+.bn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;align-items:stretch}
+.bn-grid .grp{margin:0;display:flex;flex-direction:column}
+.bn-grid .grp-body{flex:1 1 auto}
+.bn-out{margin-top:auto}
+.bn-grid .grp>h2{display:flex;align-items:center;gap:9px;font-size:13.5px;letter-spacing:.02em;text-transform:none;color:var(--ink);padding-top:14px}
+.bn-grid .grp>h2 .mod-ic{width:28px;height:28px;border-radius:8px}
+.bn-grid .grp>h2 .mod-ic svg{width:15px;height:15px}
+.bn-grid textarea{min-height:84px;font-size:15px;line-height:1.6}
+.bn-sws{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.bn-sw{width:32px;height:32px;padding:0;border-radius:9px;border:1px solid var(--line);box-shadow:inset 0 0 0 1px #0000001a;cursor:pointer;transition:transform .12s,box-shadow .15s}
+.bn-sw:hover{transform:translateY(-1px)}
+.bn-sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
+.bn-sws input[type=color]{width:38px;height:32px;padding:2px;border:1px solid var(--line);border-radius:9px;background:var(--raise);cursor:pointer}
+.bn-sws small{font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+.bn-sizes{display:flex;flex-direction:column;gap:8px}
+.bn-sizes .pgroup-name{margin-bottom:-2px}
+.bn-num{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.bn-num .x{padding-bottom:10px;color:var(--ink-3)}
+.f .bn-unit{position:relative}
+.f .bn-unit input{padding-right:34px;font-variant-numeric:tabular-nums}
+.bn-unit em{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-style:normal;font-size:12px;color:var(--ink-3);pointer-events:none}
+.bn-seg{display:flex}
+.bn-seg button{flex:1 1 0;min-width:0;padding:6px 4px;white-space:nowrap}
+.bn-edit input[type=number]{width:100%;min-width:0;background:var(--sunk);border:1px solid var(--line-soft);border-radius:9px;padding:9px 10px;
+  -moz-appearance:textfield;appearance:textfield;transition:border-color .15s,background .15s}
+.bn-edit input[type=number]::-webkit-inner-spin-button,.bn-edit input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.bn-edit input[type=number]:focus{background:var(--raise);border-color:var(--accent);outline:none}
+.bn-fit{margin:0;font-size:12px;color:var(--ink-3)}
+.bn-fit:empty{display:none}
+.bn-size{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bn-step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--sunk);overflow:hidden}
+.bn-step button{border:0;background:none;width:34px;height:36px;font-size:17px;color:var(--ink-2)}
+.bn-step button:hover{background:var(--raise);color:var(--accent)}
+.bn-edit .bn-step input{width:70px;padding:0;border:0;border-radius:0;background:transparent;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
+.bn-edit .bn-step input:focus{background:var(--raise)}
+.bn-u{font-size:12.5px;color:var(--ink-2)}
+.bn-lpos{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}
+.bn-fit b{color:var(--ink);font-weight:500}
+.bn-fit.warn{color:var(--accent)}
+.bn-logos{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.bn-logos button{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;padding:5px 4px 6px;border:1px solid var(--line);border-radius:10px;
+  background:var(--raise);font-size:11.5px;color:var(--ink-2);transition:border-color .15s,box-shadow .15s}
+.bn-logos button:hover{border-color:var(--accent-line)}
+.bn-logos button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);color:var(--accent);font-weight:600}
+.bn-logos .lp-face{width:100%;height:34px;padding:4px}
+.bn-logos .lp-none{font-size:15px;color:var(--ink-3);background:var(--sunk);box-shadow:none}
+.bn-out{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.bn-out .btn{justify-content:center;padding:10px 10px}
+.bn-out .btn.wide{grid-column:1/-1;padding:12px;font-size:14px}
+.bn-out small{grid-column:1/-1;font-size:11.5px;color:var(--ink-3);line-height:1.6}
+#bnExport{white-space:nowrap}
+@media (max-width:860px){
+  .bn-stage{height:min(var(--bn-ph,34vh),48vh)}
+  .bn-split{display:none}
+  .bn-stage{border-bottom:1px solid var(--line)}
+  .bn-view{padding:14px 12px 16px}
+  .toolswitch button{padding:5px 11px;font-size:13px;letter-spacing:.03em}
+}
+@media (max-width:460px){
+  .bn-grid{grid-template-columns:minmax(0,1fr)}
+  .bn-logos{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -436,7 +558,12 @@ details.fold[data-fold="图文篇章"]>.grp-body{background:var(--sunk);padding:
         <rect x="13.4" y="21.6" width="9.2" height="4.4" rx="1.1" fill="#11141c" fill-opacity=".72"/>
         <path d="M14.2 10.2h4.6" stroke="#11141c" stroke-opacity=".7" stroke-width="1.5" stroke-linecap="round"/>
       </svg></div>
-      <h1>长图交付</h1>
+      <h1 class="vh">长图交付</h1>
+      <div class="toolswitch" id="toolSwitch" role="tablist" aria-label="切换工具" data-on="poster">
+        <span class="ts-thumb" aria-hidden="true"></span>
+        <button type="button" role="tab" data-tool="poster" aria-selected="true">长图交付</button>
+        <button type="button" role="tab" data-tool="banner" aria-selected="false">条幅预览</button>
+      </div>
     </div>
     <div class="seg viewswitch" role="group" aria-label="切换编辑与预览">
       <button type="button" id="vEdit" aria-pressed="true">编辑</button>
@@ -452,6 +579,7 @@ details.fold[data-fold="图文篇章"]>.grp-body{background:var(--sunk);padding:
       <button type="button" id="uiDark" aria-pressed="false" title="深色界面" aria-label="深色界面">☾</button>
     </div>
     <button class="btn primary" id="exportBtn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="label">导出长图</span></button>
+    <button class="btn primary bn-only" id="bnExport" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="label">一键导出</span></button>
   </header>
 
   <div class="work" id="work" data-view="edit">
@@ -486,6 +614,23 @@ details.fold[data-fold="图文篇章"]>.grp-body{background:var(--sunk);padding:
       <div class="canvaswrap" id="canvaswrap"><canvas id="poster" width="1080" height="600"></canvas></div>
     </main>
   </div>
+  <section class="bn" id="bn" aria-label="条幅预览">
+    <div class="bn-stage" id="bnStage">
+      <div class="bn-bar">
+        <span class="dims" id="bnDims">—</span>
+        <span class="grow"></span>
+        <div class="seg" role="group" aria-label="预览范围">
+          <button type="button" data-bview="one" aria-pressed="true">当前条幅</button>
+          <button type="button" data-bview="all" aria-pressed="false">全部条幅</button>
+        </div>
+      </div>
+      <div class="bn-view" id="bnView" data-mode="one"></div>
+    </div>
+    <div class="bn-split" id="bnSplit" role="separator" aria-orientation="horizontal" tabindex="0"
+      aria-label="上下拖动调整预览区高度" title="上下拖动调整预览区高度；双击恢复默认"><span></span></div>
+    <div class="bn-edit" id="bnEdit"></div>
+    <input type="file" id="bnLogoFile" accept="image/*" hidden>
+  </section>
 </div>
 
 <input type="file" id="projFile" accept="application/json,.json,.oneimg" hidden>
@@ -3574,6 +3719,754 @@ new ResizeObserver(()=>applyZoom()).observe($('#canvaswrap'));
   });
   new ResizeObserver(apply).observe(work);apply();
 }
+</script>
+<script>
+/* ================= 条幅预览 =================
+   A second tool beside 长图交付: training banners drawn at true proportion,
+   previewed on top and edited below, exported as a client confirmation sheet
+   (PNG), print files at real size (JPG with DPI written in, multi-page PDF),
+   all in one ZIP if wanted.
+   It keeps its own draft and undo history; the long-image tool is untouched. */
+(()=>{
+const BN_STORE='delivery-banner-v1';
+const BG=[['大红','#e60012','C0 M100 Y100 K0'],['中国红','#c8161d','C0 M100 Y100 K15'],['深红','#9b0c12','C0 M100 Y100 K40'],
+  ['宝蓝','#0b4ea2','C100 M70 Y0 K0'],['墨绿','#00694a','C100 M0 Y80 K45'],['金黄','#ffd200','C0 M18 Y100 K0'],['白色','#ffffff','C0 M0 Y0 K0']];
+const FG=[['白色','#ffffff','C0 M0 Y0 K0'],['亮黄','#ffe600','C0 M10 Y100 K0'],['金色','#f2c76b','C0 M25 Y65 K5'],
+  ['黑色','#1a1a1a','C0 M0 Y0 K100'],['大红','#e60012','C0 M100 Y100 K0']];
+const FONTS=[['sans','黑体'],['serif','宋体'],['kai','楷体']];
+const SIZES=[
+  {g:'横幅',items:[[5,.6],[6,.7],[8,.7],[10,.8],[12,1]]},
+  {g:'背景布 / 桁架',items:[[3,2],[4,2.5],[6,3]]},
+  {g:'竖幅',items:[[.8,2.5],[1,3]]}];
+const MATS=['横幅布','喷绘布','刀刮布','灯布','写真'];
+const LOGOS=[['none','无'],...Object.entries(BRAND_LOGOS).map(([id,b])=>[id,b.name]),['custom','上传']];
+const TONES=[['tint','同字色'],['color','原色'],['plate','白底'],['white','反白']];
+
+let uid=Date.now()%100000;
+const nb=(over={})=>({id:'b'+(uid++),text:'热烈欢迎各位学员参加培训班',w:8,h:.7,mat:'横幅布',qty:1,
+  bg:'#e60012',fg:'#ffffff',font:'sans',bold:true,fill:66,size:0,spacing:12,pad:60,align:'center',dir:'auto',border:false,logoScale:100,logoV:'mid',
+  logo:'none',logoData:'',logoTone:'tint',...over});
+const init=()=>({v:1,cur:0,view:'one',dpi:'auto',banners:[nb()]});
+
+const num=(v,a,b,d)=>{const n=Number(v);return Number.isFinite(n)?clamp(n,a,b):d};
+const hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v.toLowerCase():null;
+function clean(s){
+  const d=init();
+  if(!s||typeof s!=='object'||!Array.isArray(s.banners)||!s.banners.length)return d;
+  const out={v:1,view:s.view==='all'?'all':'one',dpi:['auto','72','100','150'].includes(String(s.dpi))?String(s.dpi):'auto',
+    banners:[]};
+  for(const r of s.banners.slice(0,30)){
+    const b=nb();
+    b.text=String(r.text??b.text).slice(0,300);
+    b.w=num(r.w,.2,50,b.w);b.h=num(r.h,.2,20,b.h);b.qty=Math.round(num(r.qty,1,999,1));
+    b.mat=MATS.includes(r.mat)?r.mat:(typeof r.mat==='string'&&r.mat.trim()?r.mat.trim().slice(0,20):b.mat);
+    b.bg=hex(r.bg)||b.bg;b.fg=hex(r.fg)||b.fg;
+    b.font=FONTS.some(f=>f[0]===r.font)?r.font:'sans';b.bold=r.bold!==false;
+    b.fill=num(r.fill,30,90,66);b.size=Math.round(num(r.size,0,500,0)*10)/10;b.logoScale=num(r.logoScale,40,250,100);b.logoV=['top','mid','bottom'].includes(r.logoV)?r.logoV:'mid';b.spacing=num(r.spacing,0,80,12);b.pad=num(r.pad,0,200,60);
+    b.align=r.align==='spread'?'spread':'center';b.dir=['auto','h','v'].includes(r.dir)?r.dir:'auto';b.border=!!r.border;
+    b.logo=LOGOS.some(l=>l[0]===r.logo)?r.logo:'none';b.logoData=typeof r.logoData==='string'?r.logoData:'';
+    if(b.logo==='custom'&&!b.logoData)b.logo='none';
+    b.logoTone=TONES.some(t=>t[0]===r.logoTone)?r.logoTone:'tint';
+    out.banners.push(b);
+  }
+  out.cur=clamp(Math.round(Number(s.cur)||0),0,out.banners.length-1);
+  return out;
+}
+let S=init();
+try{S=clean(JSON.parse(localStorage.getItem(BN_STORE)))}catch(e){}
+const cur=()=>S.banners[S.cur];
+
+/* ---------- history (own stack, shares the 撤销 / 重做 buttons) ---------- */
+let bPast=[],bFuture=[],bMark=JSON.stringify(S),bTimer=null;
+const isBanner=()=>document.body.dataset.tool==='banner';
+function bRefresh(){if(!isBanner())return;$('#undoBtn').disabled=!bPast.length;$('#redoBtn').disabled=!bFuture.length}
+function bCommit(){
+  clearTimeout(bTimer);const s=JSON.stringify(S);if(s===bMark)return;
+  bPast.push(bMark);if(bPast.length>60)bPast.shift();bMark=s;bFuture.length=0;bRefresh();
+}
+const bCommitSoon=()=>{clearTimeout(bTimer);bTimer=setTimeout(bCommit,650)};
+function bRestore(s){S=clean(JSON.parse(s));bMark=s;bRefresh();save();renderEdit();paint()}
+function bUndo(){bCommit();if(!bPast.length)return;bFuture.push(bMark);bRestore(bPast.pop());toast('已撤销')}
+function bRedo(){if(!bFuture.length)return;clearTimeout(bTimer);bPast.push(bMark);bRestore(bFuture.pop());toast('已重做')}
+function save(){try{localStorage.setItem(BN_STORE,JSON.stringify(S))}catch(e){toast('浏览器存储已满，条幅草稿没能自动保存')}}
+const posterUndo=undo,posterRedo=redo;
+undo=()=>isBanner()?bUndo():posterUndo();
+redo=()=>isBanner()?bRedo():posterRedo();
+$('#undoBtn').onclick=()=>undo();$('#redoBtn').onclick=()=>redo();
+function changed(soon){soon?bCommitSoon():bCommit();save();paint()}
+
+/* ---------- measuring + drawing ---------- */
+const faceOf=b=>b.font==='serif'?SERIF:b.font==='kai'?KAI:SANS;
+const setFace=(c,b,px)=>{c.font=`${b.bold?'bold ':''}${px}px ${faceOf(b)}`};
+const linesOf=b=>String(b.text||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
+const isVert=b=>b.dir==='v'||(b.dir==='auto'&&b.h>b.w*1.3);
+const mm=c=>{const m=c.measureText('国');return{a:m.actualBoundingBoxAscent||0,d:m.actualBoundingBoxDescent||0}};
+function logoSource(b){return b.logo==='custom'?b.logoData:b.logo!=='none'?BRAND_LOGOS[b.logo]?.src||'':''}
+const tintCache=new WeakMap();
+function tinted(img,color){
+  let m=tintCache.get(img);if(!m){m=new Map();tintCache.set(img,m)}
+  if(m.has(color))return m.get(color);
+  const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
+  const x=cv.getContext('2d');x.drawImage(img,0,0);x.globalCompositeOperation='source-in';x.fillStyle=color;x.fillRect(0,0,cv.width,cv.height);
+  m.set(color,cv);return cv;
+}
+/* Lays a banner out in pixels: glyph height comes from the 字高 share of the
+   banner's short side, shrinks only when the line would overrun the margins,
+   and 竖排 runs columns right to left. Returns what the print sheet reports. */
+function plan(c,b,W,H,img){
+  const vert=isVert(b),main=vert?H:W,cross=vert?W:H,lines=linesOf(b);
+  /* end margins follow the short side, but never eat more than a tenth of the length */
+  const pad=Math.min(cross*b.pad/100,main*.1),n=lines.length,gapK=.3;
+  setFace(c,b,200);const g=mm(c),gh=(g.a+g.d)/200||.9;
+  const ar=img?(img.width/img.height||1):1;
+  /* a backdrop (tall for its width) puts the logo above the text, a banner beside it */
+  const stack=!!img&&!vert&&H/W>=.35&&n>0;
+  const pxm=W/b.w,lk=(b.logoScale||100)/100;
+  /* a logo set to 上 floats: the text lays out as if it were not there, and the
+     two may share space; 中 / 下 keep reserving room for it */
+  const free=!!img&&b.logoV==='top';
+  let textCross=cross*b.fill/100,logo=null;
+  if(stack){
+    let lc=Math.min(cross*.6,cross*(ar>2.2?.15:.24)*lk),lm=lc*ar;
+    if(lm>main*.9){lc*=main*.9/lm;lm=main*.9}
+    logo={cross:lc,main:lm,gap:lc*.38};
+    if(!free)textCross=Math.max(textCross*.55,textCross-lc-logo.gap);
+  }
+  /* 字号: a set size is the real glyph height in cm; 自动 takes the 字高 share */
+  let glyph=n?(b.size>0?b.size/100*pxm:textCross/(n+(n-1)*gapK)):0;
+  const room=cross*.94-(stack&&!free?logo.cross+logo.gap:0);
+  if(n&&b.size>0&&glyph*(n+(n-1)*gapK)>room)glyph=room/(n+(n-1)*gapK);
+  const want=n&&b.size>0?b.size/100*pxm:glyph;
+  if(img&&!stack){
+    /* a square mark stands as tall as the text block; a wide wordmark as tall
+       as one line — and no logo takes more than a third of the length (more
+       if it was enlarged on purpose) */
+    const across=vert?1/ar:ar,block=n?glyph*(n+(n-1)*gapK):textCross;
+    let lc=free?cross*(across>2.2?.26:.4):across>2.2&&n?glyph*1.1:block*1.05;
+    lc=Math.min(cross*.8,Math.max(cross*.22,lc))*lk;
+    lc=Math.min(lc,cross*.95);
+    let lm=lc*across;const cap=main*Math.min(.6,.32*Math.max(1,lk));
+    if(lm>cap){lc*=cap/lm;lm=cap}
+    logo={cross:lc,main:lm,gap:n?Math.min(lc*.32,cross*.25):0};
+  }
+  const beside=logo&&!stack&&!free?logo.main+logo.gap:0;
+  const avail=Math.max(main*.15,main-2*pad-beside);
+  let px=glyph/gh;
+  const charLen=(ch,p)=>{if(vert)return /\s/.test(ch)?p*.5:p*.98;setFace(c,b,p);return c.measureText(ch).width};
+  const measure=p=>lines.map(l=>{const ws=[...l].map(ch=>charLen(ch,p));const sum=ws.reduce((a,x)=>a+x,0);return{ws,sum,len:sum+p*b.spacing/100*Math.max(0,ws.length-1)}});
+  let ms=measure(px),scale=1;
+  const longest=Math.max(0,...ms.map(m=>m.len));
+  if(longest>avail){scale=avail/longest;px*=scale;glyph*=scale;ms=measure(px)}
+  const sp=px*b.spacing/100;
+  const lens=ms.map(m=>{
+    if(b.align!=='spread'||m.ws.length<2)return{...m,gap:sp};
+    const gap=Math.min(px*2.5,Math.max(sp,(avail-m.sum)/(m.ws.length-1)));
+    return{...m,gap,len:m.sum+gap*(m.ws.length-1)};
+  });
+  const blockMain=Math.max(0,...lens.map(m=>m.len));
+  const blockCross=n?glyph*(n+(n-1)*gapK):0;
+  const groupMain=blockMain+beside;
+  const start=b.align==='spread'?Math.max(pad,(main-groupMain)/2):(main-groupMain)/2;
+  /* where the logo goes and where the text block starts, in canvas x / y */
+  let textAt=start+beside,crossMid=cross/2,logoBox=null;
+  if(logo){
+    const lw=vert?logo.cross:logo.main,lh=vert?logo.main:logo.cross;
+    /* 上 / 中 / 下: beside the text it slides along the banner's height; above
+       a backdrop's text it pins to the top, sits with the text, or goes under it;
+       on a 竖幅 it pins to the top end, leads the column, or follows it */
+    const lv=b.logoV||'mid',edge=Math.max(0,Math.min(cross*.08,(cross-logo.cross)/2));
+    if(stack){
+      const groupCross=logo.cross+logo.gap+blockCross,top=(cross-groupCross)/2;
+      let ly=top;
+      if(lv==='top'){
+        ly=edge;crossMid=cross/2;
+        /* 反白 on top keeps a little more air between the logo and the text */
+        if(b.logoTone==='white'){const minTop=ly+logo.cross*1.55;if(crossMid-blockCross/2<minTop)crossMid=Math.min(minTop+blockCross/2,cross-edge-blockCross/2)}
+      }
+      else if(lv==='bottom'){crossMid=top+blockCross/2;ly=top+blockCross+logo.gap}
+      else crossMid=top+logo.cross+logo.gap+blockCross/2;
+      logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
+      textAt=(main-blockMain)/2;
+    }else if(vert){
+      const endGap=Math.min(pad,main*.05);
+      let ly=start;
+      if(lv==='bottom'){textAt=start;ly=start+blockMain+logo.gap}
+      else if(lv==='top'){
+        ly=endGap;textAt=start;
+        if(b.logoTone==='white'){const minAt=ly+logo.main+Math.max(logo.main*.6,cross*.08);if(textAt<minAt)textAt=Math.min(minAt,main-endGap-blockMain)}
+      }
+      logoBox={x:(W-lw)/2,y:ly,w:lw,h:lh};
+    }else{
+      const ly=lv==='top'?edge:lv==='bottom'?cross-lh-edge:(cross-lh)/2;
+      logoBox={x:lv==='top'?Math.max(edge,Math.min(pad,main*.02)):start,y:ly,w:lw,h:lh};
+    }
+  }
+  return{want,pxm,vert,main,cross,px,glyph,scale,lines,lens,logo,logoBox,textAt,crossMid,blockMain,blockCross,gapK,g,stack};
+}
+function drawBanner(c,b,W,H,img,opt={}){
+  c.save();
+  c.fillStyle=b.bg;c.fillRect(0,0,W,H);
+  const p=plan(c,b,W,H,img);
+  if(b.border){
+    const lw=Math.max(1,p.cross*.012),ins=Math.min(p.cross*.055,p.main*.03);
+    c.strokeStyle=b.fg;c.globalAlpha=.9;c.lineWidth=lw;c.strokeRect(ins,ins,W-2*ins,H-2*ins);c.globalAlpha=1;
+  }
+  if(p.logoBox&&img){
+    const{x,y,w,h}=p.logoBox;
+    if(b.logoTone==='plate'){
+      const m=Math.min(w,h)*.16;c.fillStyle='#ffffff';round(c,x-m,y-m,w+2*m,h+2*m,m*1.2);c.drawImage(img,x,y,w,h);
+    }else c.drawImage(b.logoTone==='color'?img:tinted(img,b.logoTone==='white'?'#ffffff':b.fg),x,y,w,h);
+  }
+  if(!p.lines.length){
+    if(opt.placeholder){font(c,Math.round(p.cross*.18));c.fillStyle=b.fg;c.globalAlpha=.45;c.textAlign='center';c.textBaseline='middle';
+      c.fillText('在下方输入条幅文字',W/2,H/2)}
+    c.restore();return p;
+  }
+  c.fillStyle=b.fg;setFace(c,b,p.px);c.textBaseline='alphabetic';
+  const k=p.px/200,asc=p.g.a*k,desc=p.g.d*k,step=p.glyph*(1+p.gapK);
+  p.lines.forEach((line,i)=>{
+    const m=p.lens[i],chars=[...line];
+    let pos=p.textAt+(p.blockMain-m.len)/2;
+    const crossC=p.vert?p.crossMid+p.blockCross/2-p.glyph/2-i*step:p.crossMid-p.blockCross/2+p.glyph/2+i*step;
+    chars.forEach((ch,j)=>{
+      if(p.vert){c.textAlign='center';c.fillText(ch,crossC,pos+m.ws[j]/2+(asc-desc)/2)}
+      else{c.textAlign='left';c.fillText(ch,pos,crossC+(asc-desc)/2)}
+      pos+=m.ws[j]+m.gap;
+    });
+  });
+  c.restore();
+  return p;
+}
+const imgs=new Map();
+async function logoImg(b){
+  const src=logoSource(b);if(!src)return null;
+  if(!imgs.has(src))imgs.set(src,getImage(src));
+  return imgs.get(src);
+}
+async function fontsFor(list){
+  if(!document.fonts?.load||!list.some(b=>b.font==='serif'))return;
+  const text=[...new Set(list.map(b=>b.text).join('')+'国')].join('');
+  try{await Promise.race([Promise.all(['400','700'].map(w=>document.fonts.load(`${w} 60px "Noto Serif SC"`,text))),new Promise(r=>setTimeout(r,4000))])}catch(e){}
+}
+const m2=v=>(Math.round(v*100)/100).toFixed(2);
+const cm=v=>Math.round(v*100);
+const colorName=(v,list)=>{const p=list.find(x=>x[1]===v);return p?p[0]:'自定义'};
+const unitOf=b=>/横幅|条幅/.test(b.mat)||isVert(b)&&b.w<1.5?'条':'张';
+const glyphCm=(b,p,pxPerM)=>Math.round(p.glyph/pxPerM*100);
+
+/* ---------- preview ---------- */
+let paintRev=0,autoCm=0;
+async function paint(){
+  const rev=++paintRev,view=$('#bnView');if(!view||!isBanner())return;
+  const list=S.view==='all'?S.banners.map((b,i)=>[b,i]):[[cur(),S.cur]];
+  await fontsFor(list.map(x=>x[0]));
+  const loaded=await Promise.all(list.map(([b])=>logoImg(b)));
+  if(rev!==paintRev)return;
+  view.dataset.mode=S.view;
+  const cs=getComputedStyle(view);
+  const vw=view.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-38;
+  const vh=view.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-58;
+  const dpr=Math.min(2.5,window.devicePixelRatio||1);
+  const frag=document.createDocumentFragment();
+  let curPlan=null;
+  list.forEach(([b,i],n)=>{
+    const ar=b.w/b.h;
+    const maxH=S.view==='all'?Math.max(70,Math.min(vh,260)):Math.max(60,vh);
+    let w=Math.max(80,vw),h=w/ar;
+    if(h>maxH){h=maxH;w=h*ar}
+    w=Math.round(w);h=Math.max(8,Math.round(h));
+    const fig=document.createElement('figure');fig.className='bn-fig';fig.dataset.bsel=i;
+    fig.setAttribute('aria-current',String(i===S.cur));
+    fig.innerHTML=`<figcaption class="bn-cap"><b>条幅 ${i+1}</b><span>${esc(b.mat)} · ${b.qty} ${unitOf(b)}</span></figcaption>
+      <div class="bn-fg"><canvas width="${Math.round(w*dpr)}" height="${Math.round(h*dpr)}" style="width:${w}px;height:${h}px"
+        role="img" aria-label="${esc(linesOf(b).join(' ')||'空白条幅')}"></canvas>
+        <div class="bn-vd"><span>${m2(b.h)} m</span></div><div class="bn-hd"><span>${m2(b.w)} m</span></div></div>`;
+    const cv=fig.querySelector('canvas'),c=cv.getContext('2d');
+    const p=drawBanner(c,b,cv.width,cv.height,loaded[n],{placeholder:true});
+    if(i===S.cur)curPlan={p,pxm:cv.width/b.w};
+    frag.appendChild(fig);
+  });
+  view.replaceChildren(frag);
+  const b=cur();
+  const dims=$('#bnDims');
+  dims.innerHTML=`条幅 ${S.cur+1} / ${S.banners.length} · <b>${m2(b.w)} × ${m2(b.h)} m</b> · ${esc(b.mat)} · ${b.qty} ${unitOf(b)}`;
+  if(!curPlan)return;
+  const{p,pxm}=curPlan,fit=$('#bnFit'),lf=$('#bnLogoFit');
+  if(fit&&!p.lines.length){fit.className='bn-fit';fit.textContent='还没有文字'}
+  else if(fit){
+    const now=glyphCm(b,p,pxm),manual=b.size>0;
+    autoCm=now;
+    const inp=$('#bf-size');if(inp&&!manual)inp.placeholder=`自动 ${now}`;
+    const over=manual&&now<b.size-.5;
+    const tight=!manual&&p.scale<.7&&p.lines.length===1;
+    fit.className='bn-fit'+(over||tight?' warn':'');
+    fit.innerHTML=`字高约 <b>${now} cm</b>${isVert(b)?' · 竖排':''}`
+      +(over?` · 设定 ${b.size} cm 放不下，已缩到 ${now} cm`:!manual&&p.scale<.97?' · 已按字数自动适配':'')
+      +(tight?'，字偏小，可加长条幅或改两行':'');
+  }
+  if(lf)lf.textContent=p.logo
+    ?`Logo 约 ${Math.round((p.vert?p.logo.cross:p.logo.main)/pxm*100)} × ${Math.round((p.vert?p.logo.main:p.logo.cross)/pxm*100)} cm（宽 × 高）${b.logoV==='top'?' · 放在上方时不占文字位置':''}`:'';
+}
+let paintRaf=0;const paintSoon=()=>{cancelAnimationFrame(paintRaf);paintRaf=requestAnimationFrame(paint)};
+
+/* ---------- editor ---------- */
+const IC={
+  text:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 6h14M12 6v13M9 19h6"/></svg>',
+  size:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M3 20h18M3 18.5v3M21 18.5v3"/></svg>',
+  style:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 1.8-1.2 1.2-2.2-.7-1.2.1-2.6 1.5-2.6h1.8a4 4 0 0 0 4-4"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13l2 2 4-4"/></svg>'};
+/* the three positions read differently by layout, so the labels say what happens */
+const LVS=b=>{
+  const vert=isVert(b),stack=!vert&&b.h/b.w>=.35&&linesOf(b).length>0;
+  return stack?[['top','顶部'],['mid','文字上方'],['bottom','文字下方']]
+    :vert?[['top','顶端'],['mid','文字上方'],['bottom','文字下方']]
+    :[['top','上'],['mid','中'],['bottom','下']];
+};
+const pressed=v=>`aria-pressed="${!!v}"`;
+const slider=(k,label,min,max,step,val,fmt)=>`<div class="slide"><label class="lab" for="bf-${k}">${label}</label><output id="bo-${k}">${fmt(val)}</output>
+  <input type="range" id="bf-${k}" data-bf="${k}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
+const FMT={fill:v=>v+'%',spacing:v=>v+'%',pad:v=>v+'%',logoScale:v=>v+'%'};
+function swatches(k,list,val){
+  const custom=!list.some(x=>x[1]===val);
+  return `<div class="bn-sws">${list.map(([n,v])=>`<button type="button" class="bn-sw" style="background:${v}" title="${n} ${v}" aria-label="${n}" data-bcolor="${k}" data-v="${v}" ${pressed(v===val)}></button>`).join('')}
+    <input type="color" data-bf="${k}" value="${val}" title="自定义颜色" aria-label="自定义颜色"><small>${custom?'自定义 ':colorName(val,list)+' '}${val.toUpperCase()}</small></div>`;
+}
+function renderEdit(){
+  const ed=$('#bnEdit');if(!ed)return;
+  const keep=ed.scrollTop,b=cur(),i=S.cur,vert=isVert(b);
+  const sizeOn=(w,h)=>Math.abs(b.w-w)<.001&&Math.abs(b.h-h)<.001;
+  ed.innerHTML=`
+  <div class="bn-tabs" role="tablist" aria-label="条幅列表">
+    ${S.banners.map((x,j)=>`<button type="button" role="tab" class="bn-tab" data-btab="${j}" aria-selected="${j===i}">
+      <i style="background:${x.bg};color:${x.fg}">${j+1}</i><span>${esc(linesOf(x).join(' ')||'空白条幅')}</span></button>`).join('')}
+    <button type="button" class="btn" data-bact="add">＋ 新增条幅</button>
+    <span class="grow"></span>
+    <button type="button" class="btn" data-bact="dup" title="复制当前条幅">复制</button>
+    <button type="button" class="btn danger" data-bact="del" ${S.banners.length<2?'disabled':''} title="删除当前条幅">删除</button>
+  </div>
+  <div class="bn-grid">
+    <section class="grp"><h2><span class="mod-ic" aria-hidden="true">${IC.text}</span>条幅文字</h2>
+      <div class="grp-body">
+        <div class="f"><label for="bf-text">文字内容 <span class="opt">回车换行 = 多行</span></label>
+          <textarea id="bf-text" data-bf="text" rows="3" placeholder="例：热烈欢迎各位学员参加培训班">${esc(b.text)}</textarea>
+          <p class="bn-fit" id="bnFit" aria-live="polite"></p></div>
+        <div class="two">
+          <div class="f"><span class="lab">排列</span><div class="seg bn-seg" role="group" aria-label="排列方式">
+            ${[['center','居中'],['spread','撑满']].map(([v,n])=>`<button type="button" data-bset="align" data-v="${v}" ${pressed(b.align===v)}>${n}</button>`).join('')}</div></div>
+          <div class="f"><span class="lab">方向</span><div class="seg bn-seg" role="group" aria-label="文字方向">
+            ${[['auto','自动'],['h','横排'],['v','竖排']].map(([v,n])=>`<button type="button" data-bset="dir" data-v="${v}" ${pressed(b.dir===v)}>${n}</button>`).join('')}</div></div>
+        </div>
+        <div class="f"><span class="lab">Logo <span class="opt">${!vert&&!(b.h/b.w>=.35&&linesOf(b).length)?'放在文字左侧':'放在文字上下'}</span></span>
+          <div class="bn-logos">${LOGOS.map(([id,n])=>{
+            const src=id==='custom'?b.logoData:BRAND_LOGOS[id]?.src;
+            const face=id==='none'?'<span class="lp-face lp-none">—</span>'
+              :src?`<span class="lp-face"><img src="${src}" alt=""></span>`:'<span class="lp-face lp-none">＋</span>';
+            return `<button type="button" data-blogo="${id}" ${pressed(b.logo===id)}>${face}<small>${n}</small></button>`}).join('')}</div>
+          ${b.logo!=='none'?`<div class="seg bn-seg" role="group" aria-label="Logo 颜色">${TONES.map(([v,n])=>`<button type="button" data-bset="logoTone" data-v="${v}" ${pressed(b.logoTone===v)}>${n}</button>`).join('')}</div>
+          <div class="bn-lpos"><span class="lab">位置</span><div class="seg bn-seg" role="group" aria-label="Logo 位置">${LVS(b).map(([v,n])=>`<button type="button" data-bset="logoV" data-v="${v}" ${pressed(b.logoV===v)}>${n}</button>`).join('')}</div></div>
+          ${slider('logoScale','Logo 大小',40,250,5,b.logoScale,FMT.logoScale)}<p class="bn-fit" id="bnLogoFit"></p>`:''}
+        </div>
+      </div></section>
+
+    <section class="grp"><h2><span class="mod-ic" aria-hidden="true">${IC.size}</span>尺寸与材质</h2>
+      <div class="grp-body">
+        <div class="bn-sizes">${SIZES.map(gr=>`<div class="pgroup-name">${gr.g}</div><div class="chips">${gr.items.map(([w,h])=>
+          `<button type="button" class="chip" data-bsize="${w}x${h}" ${pressed(sizeOn(w,h))}>${w} × ${h} m</button>`).join('')}</div>`).join('')}</div>
+        <div class="bn-num">
+          <div class="f"><label for="bf-w">宽（长）</label><span class="bn-unit"><input id="bf-w" data-bf="w" type="number" inputmode="decimal" min="0.2" max="50" step="0.1" value="${b.w}"><em>米</em></span></div>
+          <span class="x">×</span>
+          <div class="f"><label for="bf-h">高</label><span class="bn-unit"><input id="bf-h" data-bf="h" type="number" inputmode="decimal" min="0.2" max="20" step="0.1" value="${b.h}"><em>米</em></span></div>
+        </div>
+        <div class="two">
+          <div class="f"><label for="bf-mat">材质</label><select id="bf-mat" data-bf="mat">${[...new Set([...MATS,b.mat])].map(m=>`<option ${m===b.mat?'selected':''}>${esc(m)}</option>`).join('')}</select></div>
+          <div class="f"><label for="bf-qty">数量</label><span class="bn-unit"><input id="bf-qty" data-bf="qty" type="number" inputmode="numeric" min="1" max="999" step="1" value="${b.qty}"><em>${unitOf(b)}</em></span></div>
+        </div>
+      </div></section>
+
+    <section class="grp"><h2><span class="mod-ic" aria-hidden="true">${IC.style}</span>颜色与字体</h2>
+      <div class="grp-body">
+        <div class="f"><span class="lab">底色</span>${swatches('bg',BG,b.bg)}</div>
+        <div class="f"><span class="lab">字色</span>${swatches('fg',FG,b.fg)}</div>
+        <div class="two">
+          <div class="f"><span class="lab">字体</span><div class="seg bn-seg" role="group" aria-label="字体">
+            ${FONTS.map(([v,n])=>`<button type="button" data-bset="font" data-v="${v}" ${pressed(b.font===v)}>${n}</button>`).join('')}</div></div>
+          <div class="f"><span class="lab">字重与边框</span><div class="seg bn-seg" role="group" aria-label="字重与边框">
+            <button type="button" data-btog="bold" ${pressed(b.bold)}>加粗</button><button type="button" data-btog="border" ${pressed(b.border)}>细边框</button></div></div>
+        </div>
+        <div class="f"><label for="bf-size">字号 <span class="opt">实际字高，留空 = 自动</span></label>
+          <div class="bn-size"><span class="bn-step"><button type="button" data-bstep="-1" aria-label="字号减小">−</button>
+            <input id="bf-size" data-bf="size" type="number" inputmode="decimal" min="1" max="500" step="1" value="${b.size||''}" placeholder="自动">
+            <button type="button" data-bstep="1" aria-label="字号增大">＋</button></span><span class="bn-u">厘米</span>
+            <button type="button" class="hl-auto" data-bact="autosize" ${b.size?'':'hidden'}>恢复自动</button></div></div>
+        <div id="bnFillRow" ${b.size?'hidden':''}>${slider('fill','自动字高 <span class="opt">占条幅高度</span>',30,90,1,b.fill,FMT.fill)}</div>
+        ${slider('spacing','字距',0,80,1,b.spacing,FMT.spacing)}
+        ${slider('pad',`${vert?'上下':'两端'}留白 <span class="opt">相对条幅${vert?'宽度':'高度'}</span>`,0,200,5,b.pad,FMT.pad)}
+      </div></section>
+
+    <section class="grp"><h2><span class="mod-ic" aria-hidden="true">${IC.out}</span>导出</h2>
+      <div class="grp-body">
+        <div class="f"><label for="bf-dpi">印刷分辨率</label><select id="bf-dpi" data-bdpi>
+          ${[['auto','自动（大幅 72 dpi，小幅更高）'],['72','72 dpi · 喷绘常用'],['100','100 dpi'],['150','150 dpi · 近看物料']].map(([v,n])=>`<option value="${v}" ${S.dpi===v?'selected':''}>${n}</option>`).join('')}</select></div>
+        <div class="bn-out">
+          <button type="button" class="btn primary wide" data-bexp="all">一键导出全部（ZIP）</button>
+          <button type="button" class="btn" data-bexp="sheet">确认单图片</button>
+          <button type="button" class="btn" data-bexp="pdf">印刷 PDF</button>
+          <button type="button" class="btn" data-bexp="jpg">印刷 JPG</button>
+          <button type="button" class="btn" data-bexp="svg" title="CorelDRAW 打开后可另存为 CDR，文字可编辑">矢量 SVG（CDR 用）</button>
+          <small>确认单是一张图，发给客户核对条幅效果、尺寸和文字；PDF / JPG 按实际尺寸出图，文件名写明尺寸、材质和数量，交给印刷厂。浏览器无法直接生成 CDR：矢量 SVG 按实际尺寸（毫米）、文字可编辑，用 CorelDRAW 打开后「另存为」CDR 即可。</small>
+        </div>
+      </div></section>
+  </div>`;
+  ed.scrollTop=keep;
+}
+/* small in-place updates, so leaving a field never rebuilds the editor
+   (a rebuild on blur would swallow the click that caused the blur) */
+function syncSizeUI(){
+  const b=cur(),fr=$('#bnFillRow'),au=document.querySelector('[data-bact="autosize"]');
+  if(fr)fr.hidden=b.size>0;if(au)au.hidden=!(b.size>0);
+  document.querySelectorAll('[data-bsize]').forEach(x=>{const[w,h]=x.dataset.bsize.split('x').map(Number);x.setAttribute('aria-pressed',String(Math.abs(b.w-w)<.001&&Math.abs(b.h-h)<.001))});
+  const u=$('#bf-qty')?.nextElementSibling;if(u)u.textContent=unitOf(b);
+}
+function syncTab(){
+  const t=document.querySelector(`.bn-tab[data-btab="${S.cur}"] span`);if(t)t.textContent=linesOf(cur()).join(' ')||'空白条幅';
+}
+
+const bnEl=$('#bn');
+bnEl.addEventListener('click',async e=>{
+  const fig=e.target.closest('.bn-fig');
+  if(fig&&S.view==='all'&&+fig.dataset.bsel!==S.cur){S.cur=+fig.dataset.bsel;save();renderEdit();paint();return}
+  const btn=e.target.closest('button');if(!btn||btn.disabled)return;
+  const d=btn.dataset,b=cur();
+  if(d.bview){S.view=d.bview;document.querySelectorAll('[data-bview]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.bview===S.view)));save();paint();return}
+  if(d.btab!==undefined){S.cur=+d.btab;save();renderEdit();paint();return}
+  if(d.bact==='add'){S.banners.push(nb({text:'',bg:b.bg,fg:b.fg,font:b.font,mat:b.mat,w:b.w,h:b.h}));S.cur=S.banners.length-1;changed();renderEdit();$('#bf-text')?.focus();return}
+  if(d.bact==='dup'){const c=structuredClone(b);c.id='b'+(uid++);S.banners.splice(S.cur+1,0,c);S.cur++;changed();renderEdit();toast('已复制为新条幅');return}
+  if(d.bact==='del'){
+    if(S.banners.length<2)return;
+    const before=JSON.stringify(S);S.banners.splice(S.cur,1);S.cur=clamp(S.cur,0,S.banners.length-1);changed();renderEdit();
+    toast('已删除条幅',{label:'撤销',run:()=>{bFuture.push(bMark);bRestore(before)}});return;
+  }
+  if(d.bstep){
+    const base=b.size||autoCm||Math.round(b.h*40);
+    b.size=clamp(Math.round(base)+Number(d.bstep),1,500);changed();renderEdit();return}
+  if(d.bact==='autosize'){b.size=0;changed();renderEdit();return}
+  if(d.bset){b[d.bset]=d.v;changed();renderEdit();return}
+  if(d.btog){b[d.btog]=!b[d.btog];changed();btn.setAttribute('aria-pressed',String(b[d.btog]));return}
+  if(d.bcolor){b[d.bcolor]=d.v;changed();renderEdit();return}
+  if(d.bsize){const[w,h]=d.bsize.split('x').map(Number);b.w=w;b.h=h;
+    if(h>=2&&w>=h&&b.mat==='横幅布')b.mat='喷绘布';else if(h<1.5&&b.mat==='喷绘布')b.mat='横幅布';
+    changed();renderEdit();return}
+  if(d.blogo){
+    if(d.blogo==='custom'&&!b.logoData){$('#bnLogoFile').click();return}
+    b.logo=d.blogo;changed();renderEdit();return;
+  }
+  if(d.bexp)return runExport(d.bexp,btn);
+});
+bnEl.addEventListener('dblclick',e=>{if(e.target.closest('[data-blogo="custom"]'))$('#bnLogoFile').click()});
+bnEl.addEventListener('input',e=>{
+  const t=e.target,b=cur();
+  const k=t.dataset.bf;if(!k)return;
+  if(k==='text'){b.text=t.value;syncTab();changed(true);return}
+  if(k==='bg'||k==='fg'){b[k]=t.value;const sm=t.nextElementSibling;if(sm)sm.textContent='自定义 '+t.value.toUpperCase();
+    t.parentElement.querySelectorAll('.bn-sw').forEach(s=>s.setAttribute('aria-pressed',String(s.dataset.v===t.value)));
+    const tab=document.querySelector(`.bn-tab[data-btab="${S.cur}"] i`);if(tab){tab.style.background=b.bg;tab.style.color=b.fg}
+    changed(true);return}
+  if(k==='size'){
+    if(t.value===''){if(b.size){b.size=0;syncSizeUI();changed(true)}return}
+    const v=Number(t.value);if(!Number.isFinite(v)||v<1||v>500)return;
+    b.size=Math.round(v*10)/10;syncSizeUI();changed(true);return}
+  if(k==='fill'||k==='spacing'||k==='pad'||k==='logoScale'){b[k]=Number(t.value);$('#bo-'+k).textContent=FMT[k](b[k]);changed(true);return}
+  if(k==='w'||k==='h'||k==='qty'){
+    const lim={w:[.2,50],h:[.2,20],qty:[1,999]}[k],v=Number(t.value);
+    if(t.value===''||!Number.isFinite(v)||v<lim[0]||v>lim[1])return;   /* wait until the number is complete */
+    b[k]=k==='qty'?Math.round(v):Math.round(v*100)/100;
+    syncSizeUI();changed(true);return}
+});
+bnEl.addEventListener('change',async e=>{
+  const t=e.target,b=cur();
+  if(t.id==='bnLogoFile'){
+    const f=t.files?.[0];t.value='';if(!f)return;
+    try{b.logoData=await prepImage(f,'logo');b.logo='custom';changed();renderEdit();toast('Logo 已更新')}
+    catch(err){toast(err.message||'图片读取失败')}
+    return;
+  }
+  if(t.dataset.bdpi!==undefined){S.dpi=t.value;save();return}
+  const k=t.dataset.bf;
+  if(k==='mat'){b.mat=t.value;changed();renderEdit();return}
+  if(k==='w'||k==='h'||k==='qty'){
+    const lim={w:[.2,50],h:[.2,20],qty:[1,999]}[k];
+    b[k]=k==='qty'?Math.round(num(t.value,...lim,b[k])):Math.round(num(t.value,...lim,b[k])*100)/100;
+    t.value=b[k];syncSizeUI();changed();return;
+  }
+  if(k==='size'){if(t.value==='')b.size=0;else b.size=Math.round(num(t.value,1,500,b.size||autoCm)*10)/10;t.value=b.size||'';syncSizeUI();changed();return}
+  if(k==='text'||k==='fill'||k==='spacing'||k==='pad'||k==='logoScale'||k==='bg'||k==='fg')bCommit();
+});
+
+/* ---------- tool switch ---------- */
+function setTool(t,quiet){
+  const ban=t==='banner';
+  document.body.dataset.tool=ban?'banner':'poster';
+  const sw=$('#toolSwitch');sw.dataset.on=ban?'banner':'poster';
+  sw.querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tool===(ban?'banner':'poster'))));
+  document.title=ban?'条幅预览 · 长图交付':'长图交付';
+  try{localStorage.setItem('delivery-tool',ban?'banner':'poster')}catch(e){}
+  if(!quiet)try{history.replaceState(null,'',ban?'#banner':location.pathname+location.search)}catch(e){}
+  if(ban){bRefresh();renderEdit();paint()}
+  else{refreshHistory();applyZoom()}
+}
+$('#toolSwitch').addEventListener('click',e=>{const b=e.target.closest('button[data-tool]');if(b)setTool(b.dataset.tool)});
+$('#toolSwitch').addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();
+  const t=e.key==='ArrowRight'?'banner':'poster';setTool(t);$(`#toolSwitch [data-tool="${t}"]`).focus()}});
+$('#bnExport').addEventListener('click',e=>runExport('all',e.currentTarget));
+new ResizeObserver(()=>{if(isBanner())paintSoon()}).observe($('#bnView'));
+
+/* preview height splitter */
+{const split=$('#bnSplit'),stage=$('#bnStage');let drag=null,ph=null;
+  try{const v=Number(localStorage.getItem('banner-ph'));if(v>=150)ph=v}catch(e){}
+  const apply=()=>{if(ph===null)stage.style.removeProperty('--bn-ph');else{const max=Math.max(180,$('#bn').clientHeight-200);stage.style.setProperty('--bn-ph',clamp(ph,150,max)+'px')}};
+  const keep=()=>{try{ph===null?localStorage.removeItem('banner-ph'):localStorage.setItem('banner-ph',String(Math.round(ph)))}catch(e){}};
+  split.addEventListener('pointerdown',e=>{if(e.button!==0)return;drag=e.pointerId;split.setPointerCapture(e.pointerId);split.classList.add('dragging');document.body.classList.add('vresizing');e.preventDefault()});
+  split.addEventListener('pointermove',e=>{if(drag!==e.pointerId)return;ph=e.clientY-stage.getBoundingClientRect().top-6;apply()});
+  const end=e=>{if(drag!==e.pointerId)return;drag=null;split.classList.remove('dragging');document.body.classList.remove('vresizing');keep()};
+  split.addEventListener('pointerup',end);split.addEventListener('pointercancel',end);
+  split.addEventListener('dblclick',()=>{ph=null;apply();keep()});
+  split.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();
+    ph=stage.getBoundingClientRect().height+(e.key==='ArrowUp'?-1:1)*(e.shiftKey?60:20);apply();keep()});
+  apply();
+}
+
+/* ---------- export ---------- */
+const safe=s=>String(s||'').replace(/[\\/:*?"<>|\r\n\t]+/g,' ').replace(/\s+/g,' ').trim();
+const shortText=b=>safe(linesOf(b).join(' ')).slice(0,14);
+const baseName=(b,i)=>`条幅${String(i+1).padStart(2,'0')}_${cm(b.w)}x${cm(b.h)}cm_${safe(b.mat)}_${b.qty}${unitOf(b)}`;
+function dpiFor(b){
+  if(S.dpi!=='auto')return Number(S.dpi);
+  const m=Math.max(b.w,b.h);return m>=3?72:m>=1.5?100:150;
+}
+/* the largest canvas this browser will really draw — Safari and Chrome differ */
+function canvasOk(w,h){
+  try{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');if(!x)return false;
+    x.fillStyle='#ff0000';x.fillRect(w-1,h-1,1,1);const ok=x.getImageData(w-1,h-1,1,1).data[0]===255;cv.width=cv.height=1;return ok}
+  catch(e){return false}
+}
+function printPx(b){
+  let dpi=dpiFor(b);const want=dpi;
+  const px=d=>[Math.max(1,Math.round(b.w/.0254*d)),Math.max(1,Math.round(b.h/.0254*d))];
+  let[w,h]=px(dpi);
+  while(dpi>12&&(Math.max(w,h)>32000||w*h>2e8||!canvasOk(w,h))){dpi=Math.floor(dpi*.9);[w,h]=px(dpi)}
+  return{w,h,dpi,capped:dpi<want};
+}
+function jpegDpi(u8,dpi){
+  if(u8[0]!==0xFF||u8[1]!==0xD8)return u8;
+  if(u8[2]===0xFF&&u8[3]===0xE0&&u8[6]===0x4A&&u8[7]===0x46&&u8[8]===0x49&&u8[9]===0x46&&u8[10]===0){
+    u8[13]=1;u8[14]=dpi>>8;u8[15]=dpi&255;u8[16]=dpi>>8;u8[17]=dpi&255;return u8;
+  }
+  const app=new Uint8Array([0xFF,0xE0,0,16,0x4A,0x46,0x49,0x46,0,1,1,1,dpi>>8,dpi&255,dpi>>8,dpi&255,0,0]);
+  const out=new Uint8Array(u8.length+app.length);out.set(u8.subarray(0,2));out.set(app,2);out.set(u8.subarray(2),2+app.length);return out;
+}
+const toBlob=(cv,type,q)=>new Promise(r=>cv.toBlob(r,type,q));
+/* vector SVG for CorelDRAW (a browser cannot write .cdr): drawn in millimetres
+   at real size, text kept as live text in the Windows font names designers
+   have, the logo embedded as an image. Open it in CorelDRAW and save as CDR. */
+const SVG_FACE={sans:'SimHei, 黑体, Microsoft YaHei, PingFang SC, sans-serif',
+  serif:'SimSun, 宋体, Noto Serif SC, Songti SC, serif',kai:'KaiTi, 楷体, STKaiti, Kaiti SC, serif'};
+async function bannerSvg(b){
+  const img=await logoImg(b),W=Math.round(b.w*1000),H=Math.round(b.h*1000);
+  const c=document.createElement('canvas').getContext('2d');
+  const p=plan(c,b,W,H,img),f=v=>(Math.round(v*100)/100).toString(),out=[];
+  out.push(`<?xml version="1.0" encoding="UTF-8"?>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">`,
+    `<title>${esc(linesOf(b).join(' ')||'条幅')} ${m2(b.w)}×${m2(b.h)}米</title>`,
+    `<rect id="底色" x="0" y="0" width="${W}" height="${H}" fill="${b.bg}"/>`);
+  if(b.border){
+    const lw=Math.max(1,p.cross*.012),ins=Math.min(p.cross*.055,p.main*.03);
+    out.push(`<rect id="边框" x="${f(ins)}" y="${f(ins)}" width="${f(W-2*ins)}" height="${f(H-2*ins)}" fill="none" stroke="${b.fg}" stroke-opacity="0.9" stroke-width="${f(lw)}"/>`);
+  }
+  if(p.logoBox&&img){
+    const{x,y,w,h}=p.logoBox,t=b.logoTone;
+    if(t==='plate'){const m=Math.min(w,h)*.16;out.push(`<rect id="Logo衬板" x="${f(x-m)}" y="${f(y-m)}" width="${f(w+2*m)}" height="${f(h+2*m)}" rx="${f(m*1.2)}" fill="#ffffff"/>`)}
+    const src=t==='color'||t==='plate'?img.src:tinted(img,t==='white'?'#ffffff':b.fg).toDataURL('image/png');
+    out.push(`<image id="Logo" x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" preserveAspectRatio="none" xlink:href="${src}" href="${src}"/>`);
+  }
+  const k=p.px/200,asc=p.g.a*k,desc=p.g.d*k,step=p.glyph*(1+p.gapK);
+  const attrs=`font-family="${SVG_FACE[b.font]||SVG_FACE.sans}" font-size="${f(p.px)}"${b.bold?' font-weight="bold"':''} fill="${b.fg}"`;
+  out.push(`<g id="文字">`);
+  p.lines.forEach((line,i)=>{
+    const m=p.lens[i],chars=[...line];let pos=p.textAt+(p.blockMain-m.len)/2;
+    const crossC=p.vert?p.crossMid+p.blockCross/2-p.glyph/2-i*step:p.crossMid-p.blockCross/2+p.glyph/2+i*step;
+    if(p.vert){
+      chars.forEach((ch,j)=>{if(!/\s/.test(ch))out.push(`<text ${attrs} text-anchor="middle" x="${f(crossC)}" y="${f(pos+m.ws[j]/2+(asc-desc)/2)}">${esc(ch)}</text>`);pos+=m.ws[j]+m.gap});
+    }else{
+      const xs=chars.map((ch,j)=>{const x=pos;pos+=m.ws[j]+m.gap;return f(x)});
+      out.push(`<text ${attrs} x="${xs.join(' ')}" y="${f(crossC+(asc-desc)/2)}" xml:space="preserve">${esc(line)}</text>`);
+    }
+  });
+  out.push(`</g>`,`</svg>`);
+  return new Blob([out.join('\n')],{type:'image/svg+xml'});
+}
+async function printJpg(b){
+  const{w,h,dpi,capped}=printPx(b),img=await logoImg(b);
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  drawBanner(cv.getContext('2d'),b,w,h,img);
+  const blob=await toBlob(cv,'image/jpeg',.92);cv.width=cv.height=1;
+  if(!blob)throw new Error('印刷图编码失败，可以把分辨率调低一档再试');
+  return{data:jpegDpi(new Uint8Array(await blob.arrayBuffer()),dpi),w,h,dpi,capped};
+}
+/* minimal PDF: one page per banner at its real size, the print JPG placed
+   full-bleed. Pages over 5.08 m (PDF's 14400 pt cap) use UserUnit. */
+function makePdf(pages,title){
+  const enc=new TextEncoder(),chunks=[],offs=[];let len=0;
+  const put=x=>{const u=typeof x==='string'?enc.encode(x):x;chunks.push(u);len+=u.length};
+  const f=v=>(Math.round(v*1000)/1000).toString();
+  const u16=s=>{let h='FEFF';for(let i=0;i<s.length;i++)h+=s.charCodeAt(i).toString(16).padStart(4,'0').toUpperCase();return `<${h}>`};
+  put('%PDF-1.6\n');put(new Uint8Array([37,226,227,207,211,10]));
+  const start=n=>{offs[n]=len;put(`${n} 0 obj\n`)};
+  const n=pages.length,pageId=k=>4+k*3;
+  start(1);put('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  start(2);put(`<< /Type /Pages /Kids [${pages.map((_,k)=>pageId(k)+' 0 R').join(' ')}] /Count ${n} >>\nendobj\n`);
+  start(3);put(`<< /Title ${u16(title)} /Producer (Changtu Jiaofu) /Creator ${u16('长图交付 · 条幅预览')} >>\nendobj\n`);
+  pages.forEach((p,k)=>{
+    const id=pageId(k);let wpt=p.wm/.0254*72,hpt=p.hm/.0254*72,uu=1;
+    if(Math.max(wpt,hpt)>14400){uu=Math.ceil(Math.max(wpt,hpt)/14400);wpt/=uu;hpt/=uu}
+    const cs=`q ${f(wpt)} 0 0 ${f(hpt)} 0 0 cm /Im0 Do Q`;
+    start(id);put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(wpt)} ${f(hpt)}]${uu>1?` /UserUnit ${uu}`:''} /Resources << /XObject << /Im0 ${id+2} 0 R >> >> /Contents ${id+1} 0 R >>\nendobj\n`);
+    start(id+1);put(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`);
+    start(id+2);put(`<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.data.length} >>\nstream\n`);
+    put(p.data);put('\nendstream\nendobj\n');
+  });
+  const total=4+n*3,xref=len;
+  let x=`xref\n0 ${total}\n0000000000 65535 f \n`;
+  for(let k=1;k<total;k++)x+=String(offs[k]).padStart(10,'0')+' 00000 n \n';
+  put(x+`trailer\n<< /Size ${total} /Root 1 0 R /Info 3 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(chunks,{type:'application/pdf'});
+}
+function wrapText(c,text,maxW){
+  const out=[];for(const para of String(text).split('\n')){let line='';
+    for(const ch of para){if(c.measureText(line+ch).width>maxW&&line){out.push(line);line=ch}else line+=ch}
+    out.push(line)}
+  return out;
+}
+/* client confirmation sheet: every banner at true proportion with its
+   dimensions marked and its wording underneath — one image, nothing else */
+async function sheetCanvas(){
+  await fontsFor(S.banners);
+  const W=1800,M=90,CW=W-2*M,list=S.banners,loaded=await Promise.all(list.map(logoImg));
+  const cv=document.createElement('canvas');cv.width=W;cv.height=Math.min(30000,1100+list.length*1150);
+  const c=cv.getContext('2d');c.fillStyle='#ffffff';c.fillRect(0,0,W,cv.height);
+  const ink='#1a2030',ink2='#5a6476',ink3='#8a93a4',line='#d9dee8',red='#c8161d';
+  c.fillStyle=red;c.fillRect(0,0,W,14);
+  let y=M+30;
+  c.textBaseline='alphabetic';c.textAlign='left';c.fillStyle=ink;font(c,66,true);c.fillText('条幅确认单',M,y+36);
+  c.textAlign='right';font(c,28);c.fillStyle=ink2;c.fillText(`共 ${list.length} 款 · ${list.reduce((a,b)=>a+b.qty,0)} ${list.every(b=>unitOf(b)==='条')?'条':'件'}`,W-M,y+4);
+  c.fillText(`出图日期 ${stamp()}`,W-M,y+44);
+  y+=84;
+  y+=20;
+  for(let i=0;i<list.length;i++){
+    const b=list[i];
+    c.fillStyle=line;c.fillRect(M,y,CW,2);y+=52;
+    c.textAlign='left';c.fillStyle=ink;font(c,34,true);c.fillText(`条幅 ${i+1}`,M,y);
+    c.fillStyle=ink2;font(c,28);c.textAlign='right';c.fillText(`${m2(b.w)} × ${m2(b.h)} 米 · ${b.mat} · ${b.qty} ${unitOf(b)}`,W-M,y);
+    y+=34;
+    const ar=b.w/b.h,maxW=CW-70,maxH=620;
+    let bw=maxW,bh=bw/ar;if(bh>maxH){bh=maxH;bw=bh*ar}
+    bw=Math.round(bw);bh=Math.max(20,Math.round(bh));
+    const bx=M+Math.round((maxW-bw)/2);
+    const tile=document.createElement('canvas');tile.width=bw*2;tile.height=bh*2;
+    drawBanner(tile.getContext('2d'),b,tile.width,tile.height,loaded[i]);
+    c.save();c.shadowColor='#1a203033';c.shadowBlur=24;c.shadowOffsetY=8;c.drawImage(tile,bx,y,bw,bh);c.restore();
+    if(b.bg==='#ffffff'){c.strokeStyle=line;c.lineWidth=2;c.strokeRect(bx,y,bw,bh)}
+    /* dimension lines */
+    c.strokeStyle=ink3;c.fillStyle=ink;c.lineWidth=2;
+    const dy=y+bh+28,dx=bx+bw+30;
+    c.beginPath();c.moveTo(bx,dy-10);c.lineTo(bx,dy+10);c.moveTo(bx+bw,dy-10);c.lineTo(bx+bw,dy+10);c.moveTo(bx,dy);c.lineTo(bx+bw,dy);
+    c.moveTo(dx-10,y);c.lineTo(dx+10,y);c.moveTo(dx-10,y+bh);c.lineTo(dx+10,y+bh);c.moveTo(dx,y);c.lineTo(dx,y+bh);c.stroke();
+    mono(c,24);c.textAlign='center';c.textBaseline='middle';
+    const lab=`${m2(b.w)} m`,lw=c.measureText(lab).width+24;c.fillStyle='#ffffff';c.fillRect(bx+bw/2-lw/2,dy-16,lw,32);c.fillStyle=ink;c.fillText(lab,bx+bw/2,dy);
+    c.save();c.translate(dx,y+bh/2);c.rotate(Math.PI/2);const lab2=`${m2(b.h)} m`,lw2=c.measureText(lab2).width+24;
+    c.fillStyle='#ffffff';c.fillRect(-lw2/2,-16,lw2,32);c.fillStyle=ink;c.fillText(lab2,0,0);c.restore();
+    c.textBaseline='alphabetic';
+    y=dy+56;
+    font(c,22);c.fillStyle=ink3;c.textAlign='left';c.fillText('文字内容',M,y);y+=40;
+    font(c,32,true);c.fillStyle=ink;
+    for(const l of wrapText(c,linesOf(b).join('\n')||'（空）',CW)){c.fillText(l,M,y);y+=46}
+    y+=30;
+  }
+  y+=M-50;
+  const out=document.createElement('canvas');out.width=W;out.height=Math.ceil(y);
+  out.getContext('2d').drawImage(cv,0,0);cv.width=cv.height=1;
+  return out;
+}
+let busy=false;
+async function runExport(kind,btn){
+  if(busy)return;busy=true;
+  bCommit();
+  const label=btn.innerHTML,set=t=>{btn.textContent=t};
+  btn.disabled=true;
+  const P='',tag=stamp();
+  try{
+    if(document.fonts?.ready)await document.fonts.ready;
+    await fontsFor(S.banners);
+    if(kind==='sheet'){
+      set('正在生成…');const cv=await sheetCanvas();const blob=await toBlob(cv,'image/png');
+      if(!blob)throw new Error('确认单编码失败');
+      const r=await offerFile(`${P}条幅确认单-${tag}.png`,blob);toast(r==='declined'?'已取消保存':'确认单已导出，可直接发给客户');return;
+    }
+    if(kind==='svg'){
+      set('正在生成 SVG…');
+      const files=[];for(let i=0;i<S.banners.length;i++)files.push({name:baseName(S.banners[i],i)+'.svg',blob:await bannerSvg(S.banners[i])});
+      const r=files.length===1?await offerFile(files[0].name,files[0].blob)
+        :await offerFile(`条幅矢量SVG-${tag}.zip`,makeZip(await Promise.all(files.map(async x=>({name:x.name,data:new Uint8Array(await x.blob.arrayBuffer())})))));
+      toast(r==='declined'?'已取消保存':`已导出 ${files.length} 个 SVG，用 CorelDRAW 打开后另存为 CDR 即可`);return;
+    }
+    const jpgs=[];let capped=false;
+    for(let i=0;i<S.banners.length;i++){
+      set(`正在出图 ${i+1}/${S.banners.length}…`);
+      await new Promise(r=>setTimeout(r,30));
+      const j=await printJpg(S.banners[i]);capped=capped||j.capped;
+      jpgs.push({...j,name:`${baseName(S.banners[i],i)}_${j.dpi}dpi.jpg`,wm:S.banners[i].w,hm:S.banners[i].h});
+    }
+    const capNote=capped?'（部分条幅较长，已自动降低分辨率）':'';
+    if(kind==='jpg'){
+      const r=jpgs.length===1?await offerFile(jpgs[0].name,new Blob([jpgs[0].data],{type:'image/jpeg'}))
+        :await offerFile(`${P}条幅印刷JPG-${tag}.zip`,makeZip(jpgs.map(j=>({name:j.name,data:j.data}))));
+      toast(r==='declined'?'已取消保存':`已导出 ${jpgs.length} 张印刷图${capNote}`);return;
+    }
+    set('正在生成 PDF…');
+    const pdf=makePdf(jpgs,'条幅印刷文件');
+    if(kind==='pdf'){const r=await offerFile(`${P}条幅印刷文件-${tag}.pdf`,pdf);toast(r==='declined'?'已取消保存':`PDF 已导出，${jpgs.length} 页，按实际尺寸${capNote}`);return}
+    set('正在生成确认单…');
+    const sheet=await toBlob(await sheetCanvas(),'image/png');
+    if(!sheet)throw new Error('确认单编码失败');
+    set('正在打包…');
+    const enc=async bl=>new Uint8Array(await bl.arrayBuffer());
+    const entries=[
+      {name:'01_条幅确认单.png',data:await enc(sheet)},
+      {name:'02_条幅印刷文件.pdf',data:await enc(pdf)},
+      ...jpgs.map(j=>({name:'印刷图/'+j.name,data:j.data}))];
+    set('正在生成 SVG…');
+    for(let i=0;i<S.banners.length;i++)entries.push({name:'矢量SVG_CorelDRAW用/'+baseName(S.banners[i],i)+'.svg',data:await enc(await bannerSvg(S.banners[i]))});
+    const r=await offerFile(`${P}条幅-${tag}.zip`,makeZip(entries));
+    toast(r==='declined'?'已取消保存':`已打包：确认单、PDF、${jpgs.length} 张印刷图和矢量 SVG${capNote}`);
+  }catch(err){toast(err.message||'导出失败')}
+  finally{busy=false;btn.disabled=false;btn.innerHTML=label}
+}
+
+/* paste a picture while the banner tool is open = upload it as the Logo */
+document.addEventListener('paste',e=>{
+  if(!isBanner())return;
+  const f=[...(e.clipboardData?.files||[])].find(x=>x.type.startsWith('image/'));if(!f)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  prepImage(f,'logo').then(d=>{const b=cur();b.logoData=d;b.logo='custom';changed();renderEdit();toast('已把粘贴的图片设为 Logo')}).catch(err=>toast(err.message||'图片读取失败'));
+},true);
+
+/* window hook for quick checks from the console */
+window.__banner={get state(){return S},plan,sheetCanvas,makePdf,printPx};
+
+let start='poster';
+try{start=localStorage.getItem('delivery-tool')||'poster'}catch(e){}
+if(location.hash==='#banner')start='banner';
+setTool(start,true);
+})();
 </script>
 
 </body>
